@@ -1,0 +1,10 @@
+author = direwolf420
+version = 1.1
+displayName = Terraria Sound Suite
+hideCode = true
+homepage = https://forums.terraria.org/index.php?threads/annoyingsoundreplacer.76273/
+hideResources = false
+includeSource = false
+buildIgnore = *.csproj, *.user, obj\*, bin\*, .vs\*, README.md
+includePDB = true
+side = Client

@@ -1,0 +1,659 @@
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
+using Microsoft.Xna.Framework.Graphics;
+using ReLogic.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using Terraria;
+using Terraria.ID;
+using Terraria.ModLoader;
+using Terraria.ModLoader.Config;
+using Terraria.UI;
+using Terraria.UI.Chat;
+
+namespace TerrariaSoundSuite
+{
+    public class TerrariaSoundSuite : Mod
+    {
+        internal static TerrariaSoundSuite Instance => ModContent.GetInstance<TerrariaSoundSuite>();
+
+        internal static float MaxRangeSQ => Main.screenWidth * Main.screenWidth * 6.25f;
+        internal static float MaxRange => Main.screenWidth * 2.5f;
+
+        internal static List<DebugSound> playedSounds;
+
+        internal static int hoverIndex = -1;
+
+        internal static bool loaded = false;
+
+        //From reflection
+        internal static Dictionary<SoundType, IDictionary<string, int>> sounds;
+
+        //From reflection
+        internal static object modConfig;
+        internal static Type UIModConfigType;
+        internal static MethodInfo setMessageMethod;
+
+        internal static bool PlayingDebugSound => playingDebugCounter > 0;
+        internal static readonly int playingDebugMax = 15;
+        internal static int playingDebugCounter = 0;
+        internal static int playingDebugIndex = -1;
+        internal static bool playingDebugStart = false;
+
+        internal static readonly int enqueueTimerMax = 15;
+        internal static int enqueueTimer = 0;
+
+        internal static readonly int hoverTimeMax = 15;
+
+        /// <summary>
+        /// Because sounds that are ambient use ambientVolume to scale volume instead, but for replacement purposes we want to use soundVolume
+        /// </summary>
+        internal static bool revertVolumeSwap = false;
+        internal static float oldAmbientVolume = 0f;
+
+        public TerrariaSoundSuite()
+        {
+
+        }
+
+        public override void Load()
+        {
+            On.Terraria.Main.PlaySound_int_int_int_int_float_float += HookPlaySound;
+            ContentInstance.Register(this);
+            playedSounds = new List<DebugSound>();
+            ReflectSound();
+            ReflectSetMessage();
+            loaded = true;
+        }
+
+        internal static void ReflectSound()
+        {
+            if (sounds == null)
+            {
+                FieldInfo soundsField = typeof(SoundLoader).GetField("sounds", BindingFlags.Static | BindingFlags.NonPublic);
+                sounds = (Dictionary<SoundType, IDictionary<string, int>>)soundsField.GetValue(null);
+                if (sounds == null) throw new Exception("Reflection failed at getting the sound dictionary, report in the homepage of the mod!");
+            }
+        }
+
+        internal static void ReflectSetMessage()
+        {
+            if (setMessageMethod == null)
+            {
+                try
+                {
+                    //Interface.modConfig.SetMessage("Error: " + e.Message, Color.Red);
+                    Assembly ModLoaderAssembly = typeof(ModLoader).Assembly;
+                    Type Interface = ModLoaderAssembly.GetType("Terraria.ModLoader.UI.Interface");
+                    FieldInfo modConfigField = Interface.GetField("modConfig", BindingFlags.Static | BindingFlags.NonPublic);
+                    modConfig = modConfigField.GetValue(null);
+
+                    UIModConfigType = ModLoaderAssembly.GetType("Terraria.ModLoader.Config.UI.UIModConfig");
+                    setMessageMethod = UIModConfigType.GetMethod("SetMessage", new Type[] { typeof(string), typeof(Color) });
+                    if (setMessageMethod == null) throw new Exception("setMessageMethod is null");
+                }
+                catch (Exception e)
+                {
+                    Instance.Logger.Info("Failed to reflect SetMessage: " + e);
+                }
+            }
+        }
+
+        internal static void SetMessage(string text, Color color)
+        {
+            if (loaded && setMessageMethod != null)
+            {
+                try
+                {
+                    Type type = typeof(UIElement);
+                    FieldInfo isInitializedField = type.GetField("_isInitialized", BindingFlags.Instance | BindingFlags.NonPublic);
+                    if ((bool)isInitializedField.GetValue(modConfig))
+                    {
+                        FieldInfo modField = UIModConfigType.GetField("mod", BindingFlags.Instance | BindingFlags.NonPublic);
+                        string modName = ((Mod)modField.GetValue(modConfig)).Name;
+                        if (modName == Instance.Name)
+                        {
+                            FieldInfo IsMouseHoveringField = type.GetField("_isMouseHovering", BindingFlags.Instance | BindingFlags.NonPublic);
+                            if ((bool)IsMouseHoveringField.GetValue(modConfig))
+                            {
+                                setMessageMethod.Invoke(modConfig, new object[] { text, color });
+                            }
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Instance.Logger.Info("Failed to reflect UIModConfig.mod: " + e);
+                }
+            }
+
+            //This code basically translates to
+            //if (modConfig._isInitialized)
+            //{
+            //    if (modConfig.mod.Name == Instance.Name)
+            //    {
+            //        if (modConfig._isMouseHovering)
+            //        {
+            //            modConfig.SetMessage(text, color);
+            //        }
+            //    }
+            //}
+        }
+
+        public override void Unload()
+        {
+            playedSounds = null;
+            UIModConfigType = null;
+            setMessageMethod = null;
+            loaded = false;
+        }
+
+        public override void PreSaveAndQuit()
+        {
+            playedSounds.Clear();
+        }
+
+        public override void ModifyInterfaceLayers(List<GameInterfaceLayer> layers)
+        {
+            if (Main.gameMenu || Main.gamePaused || !Config.Instance.Debug.Active) return;
+            int InventoryIndex = layers.FindIndex(layer => layer.Name.Equals("Vanilla: Inventory"));
+            if (InventoryIndex != -1)
+            {
+                if (Config.Instance.Debug.DebugMode == DebugMode.Inspect)
+                {
+                    layers.Insert(InventoryIndex, new LegacyGameInterfaceLayer(
+                        $"{Name}: {nameof(Arrow)}",
+                        Arrow,
+                        InterfaceScaleType.Game
+                    ));
+                    layers.Insert(InventoryIndex + 2, new LegacyGameInterfaceLayer(
+                        $"{Name}: {nameof(Debug)}",
+                        Debug,
+                        InterfaceScaleType.UI
+                    ));
+                }
+                else
+                {
+                    layers.Insert(InventoryIndex, new LegacyGameInterfaceLayer(
+                        $"{Name}: {nameof(DeafText)}",
+                        DeafText,
+                        InterfaceScaleType.Game
+                    ));
+                }
+            }
+        }
+
+        private static readonly GameInterfaceDrawMethod DeafText = delegate
+        {
+            int hoverIndex = -1;
+            string text = "";
+            Color color = Color.White;
+            float fade = 0f;
+            DebugSound sound;
+            List<DebugSound> sounds = new List<DebugSound>();
+            for (int i = 0; i < playedSounds.Count; i++)
+            {
+                sound = playedSounds[i];
+                sounds.Add(sound);
+                int size = 24;
+                if (Utils.CenteredRectangle(sound.worldPos, new Vector2(size)).Contains(new Point((int)Main.MouseWorld.X, (int)Main.MouseWorld.Y)))
+                {
+                    hoverIndex = i;
+                }
+            }
+            if (hoverIndex != -1)
+            {
+                sounds.RemoveAt(hoverIndex);
+            }
+
+            for (int i = 0; i < sounds.Count; i++)
+            {
+                sound = sounds[i];
+                if (Main.LocalPlayer.DistanceSQ(sound.worldPos) < 10000f) continue;
+                sound.HoverTime--;
+                text = "(x) " + sound.typeName;
+                fade = ((float)sound.HoverTime / hoverTimeMax) * 0.4f + 0.6f;
+                color = Color.White * fade;
+                ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, text, sound.worldPos - new Vector2(24 >> 1) - Main.screenPosition, color, 0f, Vector2.Zero, Vector2.One);
+            }
+
+            if (hoverIndex != -1)
+            {
+                sound = playedSounds[hoverIndex];
+                sound.HoverTime += 2;
+                text = "(x) " + sound.typeName + " (" + sound.origin + ")";
+                fade = ((float)sound.HoverTime / hoverTimeMax) * 0.4f + 0.6f;
+                color = Color.White * fade;
+                ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, text, sound.worldPos - new Vector2(24 >> 1) - Main.screenPosition, color, 0f, Vector2.Zero, Vector2.One);
+            }
+            return true;
+        };
+
+        private static readonly GameInterfaceDrawMethod Debug = delegate
+        {
+            //Credit to jopojelly (heavily adjusted from SummonersAssociation)
+            Player player = Main.LocalPlayer;
+            int xPosition;
+            int yPosition;
+            Color color;
+            int buffsPerLine = 11;
+            int lineOffset = 0;
+            int size = 24;
+            for (int b = buffsPerLine; b < player.buffType.Length; ++b)
+            {
+                if (player.buffType[b] > 0)
+                {
+                    lineOffset = b / buffsPerLine;
+                }
+            }
+            xPosition = 32;
+            yPosition = 76 + 40 + lineOffset * 50 + Main.buffTexture[1].Height;
+            if (Main.playerInventory)
+            {
+                //So it doesn't overlap with inventory and recipe UI
+                xPosition += 2 * 47;
+                yPosition = 76 + 40 + 4 * 47;
+            }
+
+            float fade = enqueueTimer / (float)enqueueTimerMax;
+            string text = "[" + "DEBUG" + "] Last Played Sounds:";
+            if (playedSounds.Count == 0) text += " None";
+            color = FadeBetween(Color.White, Color.Green, fade);
+            DrawDebugText(text, new Vector2(xPosition, yPosition), color);
+            yPosition += size;
+
+            bool newMouseInterface = false;
+
+            int addedSoundIndex = -1;
+
+            for (int i = 0; i < playedSounds.Count; i++)
+            {
+                DebugSound sound = playedSounds[i];
+                float distance = player.DistanceSQ(sound.worldPos);
+                distance = distance > MaxRangeSQ ? MaxRangeSQ : distance;
+                float ratio = 1 - distance / MaxRangeSQ;
+                ratio = ratio * 0.6f + 0.4f;
+                //from 0.4f to 1f
+                color = sound.color;
+                if (playingDebugIndex == i)
+                {
+                    fade = playingDebugCounter / (float)playingDebugMax;
+                    color = FadeBetween(color, Color.Transparent, fade);
+                }
+                color *= ratio;
+                text = "[" + i + "] : " + sound.ToString();
+                if (Config.Instance.Debug.Verbose)
+                {
+                    text += " |";
+                    if (sound.stacktrace != string.Empty) text += " " + sound.stacktrace;
+                    if (sound.IsReplacing != null) text += " " + sound.IsReplacing.ToString();
+                }
+                Vector2 pos = new Vector2(xPosition, yPosition + i * size);
+                //The text on the left side of the screen
+                DrawDebugText(text, pos, color);
+
+                if (Utils.CenteredRectangle(pos + new Vector2(size >> 1), new Vector2(size)).Contains(new Point(Main.mouseX, Main.mouseY)))
+                {
+                    if (!player.mouseInterface)
+                    {
+                        if (!PlayingDebugSound && Main.mouseRight && Main.mouseRightRelease)
+                        {
+                            playingDebugStart = true;
+                            playingDebugIndex = i;
+                            Main.PlaySound(sound.type, -1, -1, sound.Style, sound.volumeScale, sound.pitchOffset);
+                        }
+                        else if (Main.mouseLeft && Main.mouseLeftRelease)
+                        {
+                            if (!sound.Tracked)
+                            {
+                                //always space for one
+                                if (playedSounds.Count(s => s.Tracked) < Config.Instance.Debug.TrackedSoundsCount - 1)
+                                {
+                                    sound.color = Main.DiscoColor;
+                                    sound.Tracked = true;
+                                    addedSoundIndex = i;
+                                }
+                            }
+                            else
+                            {
+                                sound.color = Color.White;
+                                sound.Tracked = false;
+                            }
+                        }
+                    }
+                    hoverIndex = i;
+                    newMouseInterface = true;
+                }
+            }
+
+            if (addedSoundIndex != -1)
+            {
+                //Reorder tracked sounds to the beginning
+                DebugSound temp = playedSounds.ElementAt(addedSoundIndex);
+                playedSounds.RemoveAt(addedSoundIndex);
+                playedSounds.Insert(0, temp);
+            }
+
+            if (hoverIndex != -1 && !player.mouseInterface)
+            {
+                Vector2 vector = Main.ThickMouse ? new Vector2(16) : new Vector2(10);
+                ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, "Left click to " + (playedSounds[hoverIndex].Tracked ? "un" : "") + "track sound", Main.MouseScreen + vector, Color.White, 0f, Vector2.Zero, Vector2.One);
+                vector.Y += 28;
+                ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, "Right click to play sound", Main.MouseScreen + vector, Color.White, 0f, Vector2.Zero, Vector2.One);
+            }
+            if (newMouseInterface) player.mouseInterface = newMouseInterface;
+            return true;
+        };
+
+        private static readonly GameInterfaceDrawMethod Arrow = delegate
+        {
+            //Credit to jopojelly (adjusted from Census)
+            for (int i = 0; i < playedSounds.Count; i++)
+            {
+                DebugSound sound = playedSounds[i];
+                if (i == hoverIndex || sound.Tracked)
+                {
+                    Color normal = sound.color;
+                    Color clicked = Color.Transparent;
+
+                    float fade = 0;
+                    if (playingDebugIndex == i) fade = playingDebugCounter / (float)playingDebugMax;
+                    Color colorFade = FadeBetween(normal, clicked, fade);
+                    int index = i == hoverIndex ? hoverIndex : i;
+
+                    //The position displayed at the sound origin
+                    //DrawDebugText("[" + index + "]", sound.worldPos - Main.screenPosition, colorFade, 1.5f);
+                    ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, "[" + index + "]", sound.worldPos - new Vector2(24 >> 1) - Main.screenPosition, colorFade, 0f, Vector2.Zero, Vector2.One * 1.5f);
+
+                    Vector2 playerCenter = Main.LocalPlayer.Center + new Vector2(0, Main.LocalPlayer.gfxOffY);
+                    Vector2 between = sound.worldPos + new Vector2(24 >> 2) - playerCenter;
+                    float length = between.Length();
+                    if (length > 40)
+                    {
+                        Vector2 offset = Vector2.Normalize(between) * Math.Min(70, length - 20);
+                        float rotation = between.ToRotation() + 3 * MathHelper.PiOver4;
+                        Vector2 drawPosition = playerCenter - Main.screenPosition + offset;
+                        fade = Math.Min(1f, (length - 20) / 70) * (1 - fade);
+                        //from here, length is used as an addidional fade for long distance
+                        if (length > MaxRange)
+                        {
+                            length = Utils.Clamp(length, MaxRange, 8 * MaxRange);
+                            length /= 10 * MaxRange;
+                            length = 1f - length;
+                        }
+                        else
+                        {
+                            length = 1f;
+                        }
+                        colorFade = normal * fade * length;
+                        Main.spriteBatch.Draw(Main.cursorTextures[0], drawPosition, null, Color.Black * fade * length, rotation, Main.cursorTextures[1].Size() / 2, new Vector2(2f), SpriteEffects.None, 0);
+                        Main.spriteBatch.Draw(Main.cursorTextures[0], drawPosition, null, colorFade, rotation, Main.cursorTextures[1].Size() / 2, new Vector2(1.5f), SpriteEffects.None, 0);
+                    }
+                }
+            }
+            hoverIndex = -1;
+            return true;
+        };
+
+        private static Color FadeBetween(Color c0, Color c1, float fade) => fade == 0f ? c0 : new Color(c0.ToVector4() * (1f - fade) + c1.ToVector4() * fade);
+
+        private SoundEffectInstance HookPlaySound(On.Terraria.Main.orig_PlaySound_int_int_int_int_float_float orig, int type, int x, int y, int Style, float volumeScale, float pitchOffset)
+        {
+            if (Main.gameMenu) return orig(type, x, y, Style, volumeScale, pitchOffset);
+
+            if (playingDebugStart)
+            {
+                playingDebugCounter = playingDebugMax;
+                playingDebugStart = false;
+                AmbientSwap(type);
+                return orig(type, x, y, Style, volumeScale, pitchOffset);
+            }
+
+            if (type == (int)SoundTypeEnum.Waterfall || type == (int)SoundTypeEnum.Lavafall) return orig(type, x, y, Style, volumeScale, pitchOffset);
+
+            DebugSound debug = new DebugSound(type, x, y, Style, volumeScale, pitchOffset);
+            //now the debug.Style is based on the constraints set by ValidStyles
+
+            //Check if it matches any filters
+
+            //TODO Can probably make this more compact
+            CustomSoundValue custom = null;
+            CustomSoundValue fresh = new CustomSoundValue();
+            if (Config.Instance.Item.Active && debug.origin.Valid(SoundType.Item))
+            {
+                ItemDefinition nothing = new ItemDefinition(0);
+                ItemDefinition item = new ItemDefinition(debug.origin.ThingID);
+                //a set rule takes priority over the nothing rule
+                if (Config.Instance.Item.Rule.ContainsKey(item))
+                {
+                    custom = Config.Instance.Item.Rule[item];
+                }
+                else if (Config.Instance.Item.Rule.ContainsKey(nothing))
+                {
+                    custom = Config.Instance.Item.Rule[nothing];
+                }
+            }
+            else if (Config.Instance.NPCHit.Active && debug.origin.Valid(SoundType.NPCHit))
+            {
+                NPCDefinition nothing = new NPCDefinition(0);
+                NPCDefinition npc = new NPCDefinition(debug.origin.ThingID);
+                if (Config.Instance.NPCHit.Rule.ContainsKey(npc))
+                {
+                    custom = Config.Instance.NPCHit.Rule[npc];
+                }
+                else if (Config.Instance.NPCHit.Rule.ContainsKey(nothing))
+                {
+                    custom = Config.Instance.NPCHit.Rule[nothing];
+                }
+            }
+            else if (Config.Instance.NPCKilled.Active && debug.origin.Valid(SoundType.NPCKilled))
+            {
+                NPCDefinition nothing = new NPCDefinition(0);
+                NPCDefinition npc = new NPCDefinition(debug.origin.ThingID);
+                if (Config.Instance.NPCKilled.Rule.ContainsKey(npc))
+                {
+                    custom = Config.Instance.NPCKilled.Rule[npc];
+                }
+                else if (Config.Instance.NPCKilled.Rule.ContainsKey(nothing))
+                {
+                    custom = Config.Instance.NPCKilled.Rule[nothing];
+                }
+            }
+
+            if (custom != null && custom.Enabled)
+            {
+                custom.Validate();
+                if (custom.Type == SoundTypeEnum.None) return null;
+                //Only if not a "default" and if sound exists (mod associated with it loaded)
+                else if (!custom.Equals(debug) && custom.Exists().exists) ModifySound(custom, ref type, ref Style, ref volumeScale, ref pitchOffset, ref debug);
+            }
+
+            //Check global filter
+            if (!debug.replaced && Config.Instance.General.Active)
+            {
+                //Check if the currently playing sound exists
+
+                CustomSound customKey = debug.ToCustomSound();
+                CustomSound customNothingKey = new CustomSound(SoundTypeEnum.None);
+                custom = null;
+                var keys = Config.Instance.General.Rule.Keys;
+                foreach (var key in keys)
+                {
+                    if (customKey.Equals(key))
+                    {
+                        custom = Config.Instance.General.Rule[key];
+                        customKey = key;
+                        break;
+                    }
+                }
+
+                if (custom == null && Config.Instance.General.Rule.ContainsKey(customNothingKey))
+                {
+                    //fix spamming sounds because they use different logic and I cba to copy all of PlaySound
+                    if (customKey.Type != SoundTypeEnum.Waterfall && customKey.Type != SoundTypeEnum.Lavafall)
+                    {
+                        custom = Config.Instance.General.Rule[customNothingKey];
+                    }
+                }
+
+                if (custom != null)
+                {
+                    if (custom.Enabled)
+                    {
+                        custom.Validate();
+                        if (customKey.Type == SoundTypeEnum.None) return null;
+                        //Only if not a "default" and if sound exists (mod associated with it loaded)
+                        else if (custom != fresh && custom.Exists().exists) ModifySound(custom, ref type, ref Style, ref volumeScale, ref pitchOffset, ref debug);
+                    }
+                }
+            }
+
+            var instance = orig(type, x, y, Style, volumeScale, pitchOffset);
+            if (instance != null)
+            {
+                if (Config.Instance.Debug.Contains(debug)) return instance;
+                AddDebugSound(debug);
+            }
+            if (revertVolumeSwap)
+            {
+                Main.ambientVolume = oldAmbientVolume;
+            }
+            return instance;
+        }
+
+        private void ModifySound(CustomSoundValue custom, ref int type, ref int Style, ref float volumeScale, ref float pitchOffset, ref DebugSound debug)
+        {
+            type = (int)custom.Type;
+            Style = custom.Style;
+            //Blame red
+            if (custom.Type == SoundTypeEnum.ZombieMoan)
+            {
+                if (custom.Style == custom.ValidStyles.others[0]) Style = NPCID.ThePossessed;
+                else if (custom.Style == custom.ValidStyles.others[1]) Style = NPCID.SandShark;
+            }
+            volumeScale *= custom.Volume;
+            volumeScale = Math.Min(volumeScale, CustomSoundValue.MAX_VOLUME); //Rrrors happen if it's above limit
+            pitchOffset = custom.Pitch;
+            DebugSound old = debug;
+            debug = new DebugSound(custom, debug, replaced: true)
+            {
+                IsReplacing = old
+            };
+
+            AmbientSwap(type);
+        }
+
+        private void AddDebugSound(DebugSound sound)
+        {
+            bool anywhere = sound.X == -1 || sound.Y == -1;
+            if (anywhere || Main.LocalPlayer.DistanceSQ(sound.worldPos) < MaxRangeSQ)
+            {
+                if (anywhere)
+                {
+                    sound.worldPos = Main.LocalPlayer.Center;
+                }
+                if (playedSounds.Count >= Config.Instance.Debug.TrackedSoundsCount)
+                {
+                    int index = playedSounds.FindIndex(s => !s.Tracked);
+                    if (index != -1) playedSounds.RemoveAt(index);
+                }
+                enqueueTimer = enqueueTimerMax;
+                playedSounds.Add(sound);
+            }
+        }
+
+        /// <summary>
+        /// Because sounds that are ambient use this to scale volume instead
+        /// </summary>
+        private void AmbientSwap(int type)
+        {
+            if ((type >= 30 && type <= 35) || type == 39)
+            {
+                oldAmbientVolume = Main.ambientVolume;
+                Main.ambientVolume = Main.soundVolume;
+                revertVolumeSwap = true;
+            }
+        }
+
+        private bool CanBePlayed(int type, int x, int y)
+        {
+            bool flag = false;
+            float num2 = 1f;
+            float num3 = 0f;
+            if (x == -1 || y == -1)
+            {
+                flag = true;
+            }
+            else
+            {
+                if (WorldGen.gen)
+                {
+                    return false;
+                }
+                //if (Main.netMode == 2)
+                //{
+                //    return false;
+                //}
+                Rectangle value = new Rectangle((int)(Main.screenPosition.X - (float)(Main.screenWidth * 2)), (int)(Main.screenPosition.Y - (float)(Main.screenHeight * 2)), Main.screenWidth * 5, Main.screenHeight * 5);
+                Rectangle rectangle = new Rectangle(x, y, 1, 1);
+                Vector2 vector = new Vector2(Main.screenPosition.X + (float)Main.screenWidth * 0.5f, Main.screenPosition.Y + (float)Main.screenHeight * 0.5f);
+                if (rectangle.Intersects(value))
+                {
+                    flag = true;
+                }
+                if (flag)
+                {
+                    num3 = ((float)x - vector.X) / ((float)Main.screenWidth * 0.5f);
+                    float num4 = Math.Abs((float)x - vector.X);
+                    float num5 = Math.Abs((float)y - vector.Y);
+                    float num6 = (float)Math.Sqrt((double)(num4 * num4 + num5 * num5));
+                    num2 = 1f - num6 / ((float)Main.screenWidth * 1.5f);
+                }
+            }
+            if (num3 < -1f)
+            {
+                num3 = -1f;
+            }
+            if (num3 > 1f)
+            {
+                num3 = 1f;
+            }
+            if (num2 > 1f)
+            {
+                num2 = 1f;
+            }
+            if (num2 <= 0f && (type < 34 || type > 35 || type > 39))
+            {
+                return false;
+            }
+            if (flag)
+            {
+                if ((type >= 30 && type <= 35) || type == 39)
+                {
+                    num2 *= Main.ambientVolume * (float)(Main.gameInactive ? 0 : 1);
+                }
+                else
+                {
+                    num2 *= Main.soundVolume;
+                }
+                if (num2 > 1f)
+                {
+                    num2 = 1f;
+                }
+                if (num2 <= 0f && (type < 30 || type > 35) && type != 39)
+                {
+                    return false;
+                }
+            }
+            //No support for mod sounds ?? SoundLoader.PlayModSound internal
+            //SoundEffectInstance soundEffectInstance = null;
+            //if (SoundLoader.PlayModSound(type, num, num2, num3, ref soundEffectInstance))
+            return flag;
+        }
+
+        private static void DrawDebugText(string text, Vector2 pos, Color color, float scale = 0.8f) =>
+            Main.spriteBatch.DrawString(Main.fontItemStack, text, pos, color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+    }
+}
