@@ -115,7 +115,7 @@ namespace TerrariaSoundSuite
                     stacktrace = method.DeclaringType.FullName + "." + method.Name + (lineNumber == 0 ? "" : ":" + lineNumber);
                 }
             }
-            if (string.IsNullOrEmpty(path)) path = CustomSound.VANILLAPATH;
+            if (string.IsNullOrEmpty(path)) path = CustomSound.VANILLA_PATH;
             if (string.IsNullOrEmpty(stacktrace)) stacktrace = string.Empty;
 
             //Get origin

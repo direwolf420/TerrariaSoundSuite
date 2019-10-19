@@ -101,6 +101,9 @@ namespace TerrariaSoundSuite
             }
         }
 
+        /// <summary>
+        /// Accesses the ModConfig message UI text box to push messages
+        /// </summary>
         internal static void SetMessage(string text, Color color)
         {
             if (loaded && setMessageMethod != null)

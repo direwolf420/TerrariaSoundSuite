@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
+using Terraria.ModLoader;
 using Terraria.ModLoader.Config;
 
 namespace TerrariaSoundSuite
@@ -16,8 +17,7 @@ namespace TerrariaSoundSuite
     public class Config : ModConfig
     {
         public override ConfigScope Mode => ConfigScope.ClientSide;
-        public static Config Instance;
-
+        public static Config Instance => ModContent.GetInstance<Config>();
 
         [Header("Specific filters")]
 
@@ -87,10 +87,5 @@ namespace TerrariaSoundSuite
         public bool Useless => true;
 
         //TODO presets?
-
-        public override void OnLoaded()
-        {
-            base.OnLoaded();
-        }
     }
 }

@@ -67,7 +67,7 @@ namespace TerrariaSoundSuite
 
         public override string ToString()
         {
-            return $"{nameof(Enabled)}: {(Enabled ? "Yes" : "No")} {SEPARATOR} {(int)Type} {SEPARATOR} {Style} {SEPARATOR} {ShortPath} {SEPARATOR} {Volume}, {Pitch}";
+            return $"{nameof(Enabled)}: {(Enabled ? "Yes" : "No")} {SEPARATOR} {(int)Type} {SEPARATOR} {Style} {SEPARATOR} {ShortPath} {SEPARATOR} {Volume} {SEPARATOR} {Pitch}";
         }
     }
 }

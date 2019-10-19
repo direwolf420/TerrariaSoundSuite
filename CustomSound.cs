@@ -18,7 +18,7 @@ namespace TerrariaSoundSuite
     public class CustomSound
     {
         //DON'T CHANGE THOSE ONCE RELEASED
-        internal const string VANILLAPATH = "Vanilla";
+        internal const string VANILLA_PATH = "Vanilla";
         internal const char SEPARATOR = '|';
 
         [OnDeserialized]
@@ -96,7 +96,7 @@ namespace TerrariaSoundSuite
                 if (!Modded)
                 {
                     //Reset path if sound changes type to vanilla
-                    Path = VANILLAPATH;
+                    Path = VANILLA_PATH;
 
                     //If sound type changes, style takes care of updating Path
                 }
@@ -137,7 +137,7 @@ namespace TerrariaSoundSuite
                     if (kvp.Key != null)
                     {
                         //so it resets with the following style change
-                        Path = VANILLAPATH;
+                        Path = VANILLA_PATH;
                     }
                     else
                     {
@@ -151,7 +151,7 @@ namespace TerrariaSoundSuite
                 }
                 if (TerrariaSoundSuite.loaded)
                 {
-                    if (Path == VANILLAPATH) //Default: assign new path if there is one
+                    if (Path == VANILLA_PATH) //Default: assign new path if there is one
                     {
                         var kvp = TerrariaSoundSuite.sounds[SoundType].FirstOrDefault(s => s.Value == _Style);
                         if (kvp.Key != null)
@@ -159,10 +159,6 @@ namespace TerrariaSoundSuite
                             Path = kvp.Key;
                         }
                     }
-                    //else //Check if current path exists, reassign Style
-                    //{
-                    //    //Keep path
-                    //}
                 }
                 if (ValidStyles.Always || !ValidStyles.Contains(_Style))
                 {
@@ -171,14 +167,11 @@ namespace TerrariaSoundSuite
             }
         }
 
-        [DefaultValue(VANILLAPATH)]
+        [DefaultValue(VANILLA_PATH)]
         [Label("Sound path")]
-        public string Path { get; set; } = VANILLAPATH; //otherwise it's null
+        public string Path { get; set; } = VANILLA_PATH; //Otherwise it's null
 
         [JsonIgnore]
-        //[DefaultValue("")]
-        //[Label("Sound path")]
-        //[Tooltip("(modded only)")]
         public string ShortPath => Path.Split(new char[] { '/' }).Last();
 
         public override bool Equals(object obj)
