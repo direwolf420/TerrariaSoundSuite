@@ -50,6 +50,19 @@ namespace TerrariaSoundSuite
 
         internal DebugSound IsReplacing { get; set; }
 
+        internal bool LineOfSight
+        {
+            get
+            {
+                //fuck this
+                return true; //for now
+                Vector2 directionTo = Main.LocalPlayer.DirectionFrom(worldPos) * 25f;
+                Dust.NewDustPerfect(worldPos, 6, Vector2.Zero);
+                Dust.NewDustPerfect(worldPos + directionTo, 6, Vector2.Zero);
+                return Collision.CanHitLine(Main.LocalPlayer.position, Main.LocalPlayer.width, Main.LocalPlayer.height, worldPos + directionTo, 1, 1);
+            }
+        }
+
         internal DebugSound(CustomSoundValue custom, DebugSound other, bool replaced = false) : this((int)custom.Type, other.X, other.Y, custom.Style, custom.Volume, custom.Pitch, replaced)
         {
 
@@ -100,7 +113,7 @@ namespace TerrariaSoundSuite
                         path = kvp.Key;
                     }
                 }
-                if (!replaced && type != (int)SoundTypeEnum.Waterfall && type != (int)SoundTypeEnum.Lavafall)
+                if (!replaced /*&& type != (int)SoundTypeEnum.Waterfall && type != (int)SoundTypeEnum.Lavafall*/)
                 {
                     //Get place where it was called from
                     //Credit to jopojelly
@@ -197,6 +210,7 @@ namespace TerrariaSoundSuite
                         }
                     }
                     break;
+                case SoundTypeEnum.Mech:
                 case SoundTypeEnum.Tile:
                     Point point = worldPos.ToTileCoordinates();
                     Tile tile = Framing.GetTileSafely(point);
@@ -268,10 +282,15 @@ namespace TerrariaSoundSuite
 
         internal static string GetSoundTypeName(int type)
         {
-            string ret = "Unknown";
+            string ret = UNKNOWN;
             if (Enum.IsDefined(typeof(SoundTypeEnum), type))
             {
                 ret = Enum.GetName(typeof(SoundTypeEnum), type);
+            }
+            else
+            {
+                if (type == SoundID.Waterfall) ret = "Waterfall";
+                if (type == SoundID.Lavafall) ret = "Lavafall";
             }
             return ret;
         }
@@ -289,7 +308,7 @@ namespace TerrariaSoundSuite
                 case SoundType.NPCKilled:
                     return Main.maxNPCKilledSounds + 1;
                 case SoundType.Music:
-                    return Main.maxMusic;
+                    return int.MaxValue;
             }
             return 0;
         }
@@ -385,8 +404,8 @@ namespace TerrariaSoundSuite
         Frog = SoundID.Frog,
         Bird = SoundID.Bird,
         Critter = SoundID.Critter,
-        Waterfall = SoundID.Waterfall,
-        Lavafall = SoundID.Lavafall,
+        //Waterfall = SoundID.Waterfall,
+        //Lavafall = SoundID.Lavafall,
         ForceRoar = SoundID.ForceRoar,
         Meowmere = SoundID.Meowmere,
         CoinPickup = SoundID.CoinPickup,

@@ -61,7 +61,6 @@ namespace TerrariaSoundSuite
         public override void Load()
         {
             On.Terraria.Main.PlaySound_int_int_int_int_float_float += HookPlaySound;
-            ContentInstance.Register(this);
             playedSounds = new List<DebugSound>();
             ReflectSound();
             ReflectSetMessage();
@@ -201,7 +200,7 @@ namespace TerrariaSoundSuite
                 sound = playedSounds[i];
                 sounds.Add(sound);
                 int size = 24;
-                if (Utils.CenteredRectangle(sound.worldPos, new Vector2(size)).Contains(new Point((int)Main.MouseWorld.X, (int)Main.MouseWorld.Y)))
+                if (Utils.CenteredRectangle(sound.worldPos, new Vector2(size)).Contains(new Point((int)Main.MouseWorld.X, (int)Main.MouseWorld.Y)) && sound.LineOfSight)
                 {
                     hoverIndex = i;
                 }
@@ -211,15 +210,27 @@ namespace TerrariaSoundSuite
                 sounds.RemoveAt(hoverIndex);
             }
 
+            Vector2 offset = - new Vector2(18 >> 1) - Main.screenPosition;
+
             for (int i = 0; i < sounds.Count; i++)
             {
                 sound = sounds[i];
-                if (Main.LocalPlayer.DistanceSQ(sound.worldPos) < 10000f) continue;
+                float length = Main.LocalPlayer.DistanceSQ(sound.worldPos);
+                if (length < 10000f)
+                {
+                    fade = length / 10000f;
+                }
+                else
+                {
+                    fade = 1f;
+                }
                 sound.HoverTime--;
-                text = "(x) " + sound.typeName;
-                fade = ((float)sound.HoverTime / hoverTimeMax) * 0.4f + 0.6f;
+                string type = sound.LineOfSight ? sound.typeName : "...";
+                text = "(x) " + type;
+                fade *= ((float)sound.HoverTime / hoverTimeMax) * 0.3f + 0.7f;
                 color = Color.White * fade;
-                ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, text, sound.worldPos - new Vector2(24 >> 1) - Main.screenPosition, color, 0f, Vector2.Zero, Vector2.One);
+                DrawDebugText(text, sound.worldPos + offset, color, 1f, true);
+                //ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, text, sound.worldPos - new Vector2(24 >> 1) - Main.screenPosition, color, 0f, Vector2.Zero, Vector2.One);
             }
 
             if (hoverIndex != -1)
@@ -227,9 +238,12 @@ namespace TerrariaSoundSuite
                 sound = playedSounds[hoverIndex];
                 sound.HoverTime += 2;
                 text = "(x) " + sound.typeName + " (" + sound.origin + ")";
-                fade = ((float)sound.HoverTime / hoverTimeMax) * 0.4f + 0.6f;
+                fade = ((float)sound.HoverTime / hoverTimeMax) * 0.3f + 0.7f;
                 color = Color.White * fade;
-                ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, text, sound.worldPos - new Vector2(24 >> 1) - Main.screenPosition, color, 0f, Vector2.Zero, Vector2.One);
+                //ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, text, sound.worldPos - new Vector2(24 >> 1) - Main.screenPosition, color, 0f, Vector2.Zero, Vector2.One);
+
+                DrawDebugText(text, sound.worldPos + offset, color, 1f, true);
+
             }
             return true;
         };
@@ -305,7 +319,14 @@ namespace TerrariaSoundSuite
                         {
                             playingDebugStart = true;
                             playingDebugIndex = i;
-                            Main.PlaySound(sound.type, -1, -1, sound.Style, sound.volumeScale, sound.pitchOffset);
+                            int x = -1;
+                            int y = -1;
+                            //if (sound.type == (int)SoundTypeEnum.Waterfall || sound.type == (int)SoundTypeEnum.Lavafall)
+                            //{
+                            //    x = (int)Main.LocalPlayer.Center.X;
+                            //    y = (int)Main.LocalPlayer.Center.Y;
+                            //}
+                            Main.PlaySound(sound.type, x, y, sound.Style, sound.volumeScale, sound.pitchOffset);
                         }
                         else if (Main.mouseLeft && Main.mouseLeftRelease)
                         {
@@ -342,9 +363,10 @@ namespace TerrariaSoundSuite
             if (hoverIndex != -1 && !player.mouseInterface)
             {
                 Vector2 vector = Main.ThickMouse ? new Vector2(16) : new Vector2(10);
-                ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, "Left click to " + (playedSounds[hoverIndex].Tracked ? "un" : "") + "track sound", Main.MouseScreen + vector, Color.White, 0f, Vector2.Zero, Vector2.One);
+                vector += Main.MouseScreen;
+                ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, "Left click to " + (playedSounds[hoverIndex].Tracked ? "un" : "") + "track sound", vector, Color.White, 0f, Vector2.Zero, Vector2.One);
                 vector.Y += 28;
-                ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, "Right click to play sound", Main.MouseScreen + vector, Color.White, 0f, Vector2.Zero, Vector2.One);
+                ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, "Right click to play sound", vector, Color.White, 0f, Vector2.Zero, Vector2.One);
             }
             if (newMouseInterface) player.mouseInterface = newMouseInterface;
             return true;
@@ -353,6 +375,7 @@ namespace TerrariaSoundSuite
         private static readonly GameInterfaceDrawMethod Arrow = delegate
         {
             //Credit to jopojelly (adjusted from Census)
+            int size = 24;
             for (int i = 0; i < playedSounds.Count; i++)
             {
                 DebugSound sound = playedSounds[i];
@@ -367,11 +390,11 @@ namespace TerrariaSoundSuite
                     int index = i == hoverIndex ? hoverIndex : i;
 
                     //The position displayed at the sound origin
-                    //DrawDebugText("[" + index + "]", sound.worldPos - Main.screenPosition, colorFade, 1.5f);
-                    ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, "[" + index + "]", sound.worldPos - new Vector2(24 >> 1) - Main.screenPosition, colorFade, 0f, Vector2.Zero, Vector2.One * 1.5f);
+                    DrawDebugText("[" + index + "]", sound.worldPos - new Vector2(size >> 1) - Main.screenPosition, colorFade, 1.5f, true);
+                    //ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, "[" + index + "]", sound.worldPos - new Vector2(24 >> 1) - Main.screenPosition, colorFade, 0f, Vector2.Zero, Vector2.One * 1.5f);
 
                     Vector2 playerCenter = Main.LocalPlayer.Center + new Vector2(0, Main.LocalPlayer.gfxOffY);
-                    Vector2 between = sound.worldPos + new Vector2(24 >> 2) - playerCenter;
+                    Vector2 between = sound.worldPos + new Vector2(size >> 2) - playerCenter;
                     float length = between.Length();
                     if (length > 40)
                     {
@@ -414,7 +437,10 @@ namespace TerrariaSoundSuite
                 return orig(type, x, y, Style, volumeScale, pitchOffset);
             }
 
-            if (type == (int)SoundTypeEnum.Waterfall || type == (int)SoundTypeEnum.Lavafall) return orig(type, x, y, Style, volumeScale, pitchOffset);
+            if (type == SoundID.Waterfall || type == SoundID.Lavafall)
+            {
+                return orig(type, x, y, Style, volumeScale, pitchOffset);
+            }
 
             DebugSound debug = new DebugSound(type, x, y, Style, volumeScale, pitchOffset);
             //now the debug.Style is based on the constraints set by ValidStyles
@@ -495,10 +521,10 @@ namespace TerrariaSoundSuite
                 if (custom == null && Config.Instance.General.Rule.ContainsKey(customNothingKey))
                 {
                     //fix spamming sounds because they use different logic and I cba to copy all of PlaySound
-                    if (customKey.Type != SoundTypeEnum.Waterfall && customKey.Type != SoundTypeEnum.Lavafall)
-                    {
+                    //if (customKey.Type != SoundTypeEnum.Waterfall && customKey.Type != SoundTypeEnum.Lavafall)
+                    //{
                         custom = Config.Instance.General.Rule[customNothingKey];
-                    }
+                    //}
                 }
 
                 if (custom != null)
@@ -521,6 +547,7 @@ namespace TerrariaSoundSuite
             }
             if (revertVolumeSwap)
             {
+                revertVolumeSwap = false;
                 Main.ambientVolume = oldAmbientVolume;
             }
             return instance;
@@ -580,83 +607,16 @@ namespace TerrariaSoundSuite
             }
         }
 
-        private bool CanBePlayed(int type, int x, int y)
+        private static void DrawDebugText(string text, Vector2 pos, Color color, float scale = 0.8f, bool shadow = false)
         {
-            bool flag = false;
-            float num2 = 1f;
-            float num3 = 0f;
-            if (x == -1 || y == -1)
+            if (shadow)
             {
-                flag = true;
-            }
-            else
-            {
-                if (WorldGen.gen)
+                for (int i = 0; i < ChatManager.ShadowDirections.Length; i++)
                 {
-                    return false;
-                }
-                //if (Main.netMode == 2)
-                //{
-                //    return false;
-                //}
-                Rectangle value = new Rectangle((int)(Main.screenPosition.X - (float)(Main.screenWidth * 2)), (int)(Main.screenPosition.Y - (float)(Main.screenHeight * 2)), Main.screenWidth * 5, Main.screenHeight * 5);
-                Rectangle rectangle = new Rectangle(x, y, 1, 1);
-                Vector2 vector = new Vector2(Main.screenPosition.X + (float)Main.screenWidth * 0.5f, Main.screenPosition.Y + (float)Main.screenHeight * 0.5f);
-                if (rectangle.Intersects(value))
-                {
-                    flag = true;
-                }
-                if (flag)
-                {
-                    num3 = ((float)x - vector.X) / ((float)Main.screenWidth * 0.5f);
-                    float num4 = Math.Abs((float)x - vector.X);
-                    float num5 = Math.Abs((float)y - vector.Y);
-                    float num6 = (float)Math.Sqrt((double)(num4 * num4 + num5 * num5));
-                    num2 = 1f - num6 / ((float)Main.screenWidth * 1.5f);
+                    Main.spriteBatch.DrawString(Main.fontItemStack, text, pos + ChatManager.ShadowDirections[i] * 2, Color.Black * (color.A / 255f), 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
                 }
             }
-            if (num3 < -1f)
-            {
-                num3 = -1f;
-            }
-            if (num3 > 1f)
-            {
-                num3 = 1f;
-            }
-            if (num2 > 1f)
-            {
-                num2 = 1f;
-            }
-            if (num2 <= 0f && (type < 34 || type > 35 || type > 39))
-            {
-                return false;
-            }
-            if (flag)
-            {
-                if ((type >= 30 && type <= 35) || type == 39)
-                {
-                    num2 *= Main.ambientVolume * (float)(Main.gameInactive ? 0 : 1);
-                }
-                else
-                {
-                    num2 *= Main.soundVolume;
-                }
-                if (num2 > 1f)
-                {
-                    num2 = 1f;
-                }
-                if (num2 <= 0f && (type < 30 || type > 35) && type != 39)
-                {
-                    return false;
-                }
-            }
-            //No support for mod sounds ?? SoundLoader.PlayModSound internal
-            //SoundEffectInstance soundEffectInstance = null;
-            //if (SoundLoader.PlayModSound(type, num, num2, num3, ref soundEffectInstance))
-            return flag;
-        }
-
-        private static void DrawDebugText(string text, Vector2 pos, Color color, float scale = 0.8f) =>
             Main.spriteBatch.DrawString(Main.fontItemStack, text, pos, color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+        }
     }
 }

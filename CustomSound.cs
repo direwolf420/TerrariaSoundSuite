@@ -26,8 +26,13 @@ namespace TerrariaSoundSuite
 
         internal virtual void Validate()
         {
+            if (!Enum.IsDefined(Type.GetType(), Type))
+            {
+                Type = SoundTypeEnum.None; //Default fallback
+            }
             //Auto clamp because property
             Style = Style;
+            Path = Path;
         }
         
         /// <summary>
@@ -167,9 +172,25 @@ namespace TerrariaSoundSuite
             }
         }
 
+        private string _Path = VANILLA_PATH; //Otherwise it's null
+
         [DefaultValue(VANILLA_PATH)]
         [Label("Sound path")]
-        public string Path { get; set; } = VANILLA_PATH; //Otherwise it's null
+        public string Path
+        {
+            get
+            {
+                return _Path;
+            }
+            set
+            {
+                //TODO do something about user manually changing path
+                if (!Modded)
+                {
+                    _Path = VANILLA_PATH;
+                } 
+            }
+        }
 
         [JsonIgnore]
         public string ShortPath => Path.Split(new char[] { '/' }).Last();
@@ -268,9 +289,9 @@ namespace TerrariaSoundSuite
                     return new ValidStyles(0, Main.soundInstanceZombie.Length);
                 case SoundTypeEnum.Bird:
                     return new ValidStyles(14, 5 + 1);
-                case SoundTypeEnum.Waterfall:
-                case SoundTypeEnum.Lavafall:
-                    return new ValidStyles(0, 50 + 1);
+                //case SoundTypeEnum.Waterfall:
+                //case SoundTypeEnum.Lavafall:
+                //    return new ValidStyles(0, 50 + 1);
                 case SoundTypeEnum.ForceRoar:
                     return new ValidStyles(0, Main.soundInstanceRoar.Length, new List<int> { -1 });
                 case SoundTypeEnum.Meowmere:

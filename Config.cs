@@ -11,7 +11,8 @@ namespace TerrariaSoundSuite
     //TODO explain you can change style of an unloaded, modded sound, but it won't play at all until you switch out the type to something else, and save
     //TODO explain that if you have an "empty" rule, you can't add more rules to it
     //TODO if you have sound type set to "None" as the "new sound", it will mute that thing
-    //TODO explain deaf mode (mouseover, close range for clutter etc)
+    //TODO can't have Water/Lavafall, ignored
+    //TODO explain deaf mode (mouseover, close range for clutter etc, line of sight)
     //TODO can't favorite last remaining unfavorited sound
     //TODO default blacklist explanation
     public class Config : ModConfig
