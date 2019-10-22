@@ -5,23 +5,7 @@ using Terraria.ModLoader.Config;
 
 namespace TerrariaSoundSuite
 {
-    //TODO screenshot guide how to set up sounds and shit
-    //For both item/npc, and for global
-    //What debug mode does and shows
-    //TODO explain you can change style of an unloaded, modded sound, but it won't play at all until you switch out the type to something else, and save
-    //TODO explain that if you have an "empty" rule, you can't add more rules to it
-    //TODO if you have sound type set to "None" as the "new sound", it will mute that thing
-    //TODO can't have Water/Lavafall, ignored
-    //TODO explain deaf mode (mouseover, close range for clutter etc, 20 tile range/line of sight)
-    //TODO can't favorite last remaining unfavorited sound
-    //TODO default blacklist explanation
-    //TODO extra post for modders (maybe "own sound replacement mod")
-    //TODO warning about v when using extreme volume/pitch
-    /*
-     * Silently Caught Exception: 
-System.ArgumentOutOfRangeException: Specified argument was out of the range of valid values.
-Parameter name: value
-     */
+    //TODO make preview sound when clicking some button in the UI
     public class Config : ModConfig
     {
         public override ConfigScope Mode => ConfigScope.ClientSide;

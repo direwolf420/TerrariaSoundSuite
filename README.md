@@ -2,7 +2,7 @@
 
 ![Icon](https://raw.githubusercontent.com/direwolf420/TerrariaSoundSuite/master/icon.png)
 
-Terraria Forum link: homepage link
+Terraria Forum link: https://forums.terraria.org/index.php?threads/terraria-sound-suite-customize-all-ingame-sounds-and-more.83611/
 
 Do you want to use a weapon but can't stand the sound it makes? All the grunting sounds zombies make annoy you? Want to make your boots sound like squeaky ducks? Well, here is the solution!
 
