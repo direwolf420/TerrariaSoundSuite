@@ -15,6 +15,13 @@ namespace TerrariaSoundSuite
     //TODO explain deaf mode (mouseover, close range for clutter etc, 20 tile range/line of sight)
     //TODO can't favorite last remaining unfavorited sound
     //TODO default blacklist explanation
+    //TODO extra post for modders (maybe "own sound replacement mod")
+    //TODO warning about v when using extreme volume/pitch
+    /*
+     * Silently Caught Exception: 
+System.ArgumentOutOfRangeException: Specified argument was out of the range of valid values.
+Parameter name: value
+     */
     public class Config : ModConfig
     {
         public override ConfigScope Mode => ConfigScope.ClientSide;

@@ -535,6 +535,12 @@ namespace TerrariaSoundSuite
                 }
             }
 
+            //Cap for volume because vanilla is retarded
+            if (Main.soundVolume * volumeScale > 1f)
+            {
+                volumeScale = Main.soundVolume / volumeScale;
+            }
+
             var instance = orig(type, x, y, Style, volumeScale, pitchOffset);
             if (instance != null)
             {
