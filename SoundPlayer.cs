@@ -12,6 +12,7 @@ namespace TerrariaSoundSuite
             else if (TerrariaSoundSuite.playingDebugCounter == 0) TerrariaSoundSuite.playingDebugIndex = -1;
 
             if (TerrariaSoundSuite.enqueueTimer > 0) TerrariaSoundSuite.enqueueTimer--;
+            TerrariaSoundSuite.RevertAmbientSwap();
         }
 
         public override void OnEnterWorld(Player player)

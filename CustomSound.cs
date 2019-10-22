@@ -113,7 +113,7 @@ namespace TerrariaSoundSuite
         ///<summary>
         ///This should be the highest value out of all the styles
         ///</summary>
-        internal const int MAX_STYLES = Main.maxItemSounds + 100; //Valid index + buffer up assuming alot of mods add custom item sounds
+        internal const int MAX_STYLES = Main.maxItemSounds + 200; //Valid index + buffer up assuming alot of mods add custom item sounds
 
         private int _Style;
 
@@ -151,6 +151,7 @@ namespace TerrariaSoundSuite
                 }
                 if (!(Modded && ValidStyles.LastValidStyle <= 0))
                 {
+                    //Tried to do rollover here but then the textbox wasn't working properly
                     //Style adjustment gets checked in Exists(), and if style isn't valid, nothing happens ingame anyway
                     _Style = Utils.Clamp(value, ValidStyles.FirstValidStyle, ValidStyles.LastValidStyle);
                 }
@@ -188,7 +189,11 @@ namespace TerrariaSoundSuite
                 if (!Modded)
                 {
                     _Path = VANILLA_PATH;
-                } 
+                }
+                else
+                {
+                    _Path = value;
+                }
             }
         }
 

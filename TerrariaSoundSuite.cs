@@ -200,7 +200,7 @@ namespace TerrariaSoundSuite
                 sound = playedSounds[i];
                 sounds.Add(sound);
                 int size = 24;
-                if (Utils.CenteredRectangle(sound.worldPos, new Vector2(size)).Contains(new Point((int)Main.MouseWorld.X, (int)Main.MouseWorld.Y)) && sound.LineOfSight)
+                if (Utils.CenteredRectangle(sound.worldPos, new Vector2(size)).Contains(new Point((int)Main.MouseWorld.X, (int)Main.MouseWorld.Y)) && sound.Discovered)
                 {
                     hoverIndex = i;
                 }
@@ -225,12 +225,11 @@ namespace TerrariaSoundSuite
                     fade = 1f;
                 }
                 sound.HoverTime--;
-                string type = sound.LineOfSight ? sound.typeName : "...";
+                string type = sound.Discovered ? sound.typeName : "...";
                 text = "(x) " + type;
                 fade *= ((float)sound.HoverTime / hoverTimeMax) * 0.3f + 0.7f;
                 color = Color.White * fade;
                 DrawDebugText(text, sound.worldPos + offset, color, 1f, true);
-                //ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, text, sound.worldPos - new Vector2(24 >> 1) - Main.screenPosition, color, 0f, Vector2.Zero, Vector2.One);
             }
 
             if (hoverIndex != -1)
@@ -240,8 +239,6 @@ namespace TerrariaSoundSuite
                 text = "(x) " + sound.typeName + " (" + sound.origin + ")";
                 fade = ((float)sound.HoverTime / hoverTimeMax) * 0.3f + 0.7f;
                 color = Color.White * fade;
-                //ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, text, sound.worldPos - new Vector2(24 >> 1) - Main.screenPosition, color, 0f, Vector2.Zero, Vector2.One);
-
                 DrawDebugText(text, sound.worldPos + offset, color, 1f, true);
 
             }
@@ -391,7 +388,6 @@ namespace TerrariaSoundSuite
 
                     //The position displayed at the sound origin
                     DrawDebugText("[" + index + "]", sound.worldPos - new Vector2(size >> 1) - Main.screenPosition, colorFade, 1.5f, true);
-                    //ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, "[" + index + "]", sound.worldPos - new Vector2(24 >> 1) - Main.screenPosition, colorFade, 0f, Vector2.Zero, Vector2.One * 1.5f);
 
                     Vector2 playerCenter = Main.LocalPlayer.Center + new Vector2(0, Main.LocalPlayer.gfxOffY);
                     Vector2 between = sound.worldPos + new Vector2(size >> 2) - playerCenter;
@@ -443,7 +439,7 @@ namespace TerrariaSoundSuite
             }
 
             DebugSound debug = new DebugSound(type, x, y, Style, volumeScale, pitchOffset);
-            //now the debug.Style is based on the constraints set by ValidStyles
+            //Now the debug.Style is based on the constraints set by ValidStyles
 
             //Check if it matches any filters
 
@@ -454,7 +450,7 @@ namespace TerrariaSoundSuite
             {
                 ItemDefinition nothing = new ItemDefinition(0);
                 ItemDefinition item = new ItemDefinition(debug.origin.ThingID);
-                //a set rule takes priority over the nothing rule
+                //A set rule takes priority over the nothing rule
                 if (Config.Instance.Item.Rule.ContainsKey(item))
                 {
                     custom = Config.Instance.Item.Rule[item];
@@ -520,7 +516,7 @@ namespace TerrariaSoundSuite
 
                 if (custom == null && Config.Instance.General.Rule.ContainsKey(customNothingKey))
                 {
-                    //fix spamming sounds because they use different logic and I cba to copy all of PlaySound
+                    //Fix spamming sounds because they use different logic and I cba to copy all of PlaySound
                     //if (customKey.Type != SoundTypeEnum.Waterfall && customKey.Type != SoundTypeEnum.Lavafall)
                     //{
                         custom = Config.Instance.General.Rule[customNothingKey];
@@ -545,11 +541,7 @@ namespace TerrariaSoundSuite
                 if (Config.Instance.Debug.Contains(debug)) return instance;
                 AddDebugSound(debug);
             }
-            if (revertVolumeSwap)
-            {
-                revertVolumeSwap = false;
-                Main.ambientVolume = oldAmbientVolume;
-            }
+            RevertAmbientSwap();
             return instance;
         }
 
@@ -564,7 +556,7 @@ namespace TerrariaSoundSuite
                 else if (custom.Style == custom.ValidStyles.others[1]) Style = NPCID.SandShark;
             }
             volumeScale *= custom.Volume;
-            volumeScale = Math.Min(volumeScale, CustomSoundValue.MAX_VOLUME); //Rrrors happen if it's above limit
+            volumeScale = Math.Min(volumeScale, CustomSoundValue.MAX_VOLUME); //Errors happen if it's above limit
             pitchOffset = custom.Pitch;
             DebugSound old = debug;
             debug = new DebugSound(custom, debug, replaced: true)
@@ -604,6 +596,15 @@ namespace TerrariaSoundSuite
                 oldAmbientVolume = Main.ambientVolume;
                 Main.ambientVolume = Main.soundVolume;
                 revertVolumeSwap = true;
+            }
+        }
+
+        internal static void RevertAmbientSwap()
+        {
+            if (revertVolumeSwap)
+            {
+                revertVolumeSwap = false;
+                Main.ambientVolume = oldAmbientVolume;
             }
         }
 

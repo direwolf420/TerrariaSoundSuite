@@ -50,16 +50,26 @@ namespace TerrariaSoundSuite
 
         internal DebugSound IsReplacing { get; set; }
 
-        internal bool LineOfSight
+        internal bool _Discovered;
+
+        internal bool Discovered
         {
             get
             {
-                //fuck this
-                return true; //for now
-                Vector2 directionTo = Main.LocalPlayer.DirectionFrom(worldPos) * 25f;
-                Dust.NewDustPerfect(worldPos, 6, Vector2.Zero);
-                Dust.NewDustPerfect(worldPos + directionTo, 6, Vector2.Zero);
-                return Collision.CanHitLine(Main.LocalPlayer.position, Main.LocalPlayer.width, Main.LocalPlayer.height, worldPos + directionTo, 1, 1);
+                if (!_Discovered)
+                {
+                    //20 tiles
+                    if (Main.LocalPlayer.DistanceSQ(worldPos) < 102400)
+                    {
+                        _Discovered = true;
+                    }
+                    //Line of sight (inconsistent)
+                    else if (Collision.CanHitLine(Main.LocalPlayer.position, Main.LocalPlayer.width, Main.LocalPlayer.height, worldPos + Main.LocalPlayer.DirectionFrom(worldPos * 18f), 1, 1))
+                    {
+                        _Discovered = true;
+                    }
+                }
+                return _Discovered;
             }
         }
 
@@ -101,6 +111,8 @@ namespace TerrariaSoundSuite
 
             color = Color.White;
 
+            _Discovered = false;
+
             if (Config.Instance.Debug.Verbose && !Config.Instance.Debug.Contains(type, Style))
             {
                 //Get path to sound
@@ -135,7 +147,7 @@ namespace TerrariaSoundSuite
             Entity ent;
             origin = new Origin(soundType, 0, UNKNOWN);
             if (modded) origin.Name = CUSTOM;
-            if (soundType == SoundType.Custom) origin = new Origin(SoundType.Custom, 0, CUSTOM);
+            if (soundType == SoundType.Custom) origin = new Origin(SoundType.Custom, 0, path.Split(new char[] { '/' }).Last());
 
             //TODO origin name not being displayed when sound is replaced, also filter by origin properly if it's coming from an item (name != "")
             switch (soundTypeEnum)
@@ -340,7 +352,7 @@ namespace TerrariaSoundSuite
                 text += "; Origin:";
                 if (origin.Name != CUSTOM) text += " " + origin;
             }
-            if (modded) text += " (" + (Config.Instance.Debug.Verbose ? path : "Modded") + ")";
+            if (modded) text += " (" + (Config.Instance.Debug.Verbose ? path.Split(new char[] { '/' }).Last() : "Modded") + ")";
             if (replaced) text += " (Replaced)";
             return text;
         }
