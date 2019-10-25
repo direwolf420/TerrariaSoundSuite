@@ -86,13 +86,7 @@ namespace TerrariaSoundSuite
             SoundTypeEnum soundTypeEnum = (SoundTypeEnum)type;
             ValidStyles validStyles = CustomSound.GetValidStyles(soundTypeEnum);
 
-            //Red is an ass and we won't be working with him again
-            if (soundTypeEnum == SoundTypeEnum.ZombieMoan)
-            {
-                if (Style == NPCID.ThePossessed) Style = validStyles.others[0];
-                else if (Style == NPCID.SandShark) Style = validStyles.others[1];
-                else Style = validStyles.FirstValidStyle;
-            }
+            Style = TerrariaSoundSuite.RevertFixStyle(type, Style);
 
             if (validStyles.Always) Style = validStyles.FirstValidStyle;
             if (!validStyles.Contains(Style)) Style = validStyles.FirstValidStyle;
@@ -149,7 +143,7 @@ namespace TerrariaSoundSuite
             if (modded) origin.Name = CUSTOM;
             if (soundType == SoundType.Custom) origin = new Origin(SoundType.Custom, 0, path.Split(new char[] { '/' }).Last());
 
-            //TODO origin name not being displayed when sound is replaced, also filter by origin properly if it's coming from an item (name != "")
+            //TODO origin name not being displayed when sound is replaced
             switch (soundTypeEnum)
             {
                 case SoundTypeEnum.Item:
@@ -222,6 +216,7 @@ namespace TerrariaSoundSuite
                         }
                     }
                     break;
+                case SoundTypeEnum.Grass:
                 case SoundTypeEnum.Mech:
                 case SoundTypeEnum.Tile:
                     Point point = worldPos.ToTileCoordinates();
@@ -256,7 +251,7 @@ namespace TerrariaSoundSuite
         //4 : soundInstanceNPCKilled.Length
         //5+: deoesn't matter
         //14: 542 -> 7 (NPCID.SandShark)
-        //--- 469 -> (random) 21 to 23 (NPCID.ThePossessed)
+        //--- 469 -> (random) 21 to 23 (NPCID.BloodZombie)
         //--- else-> (random) 0 to 2 (all in soundInstanceZombie[num])
         //^^^ special snowflakes
         //15 : soundInstanceRoar[3] but 4 is also accepted, turns into 1 with less pitch

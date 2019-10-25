@@ -68,6 +68,7 @@ namespace TerrariaSoundSuite
             "In the 'key' entry, click the empty icon that says 'nothing'." + "\n" +
             "Pick a thing you want the sound to replace of." + "\n" +
             "In the 'New Sound' entry, pick a sound type, its style, volume and pitch." + "\n" +
+            "Click on 'Play Sound' to play the current sound" + "\n" +
             "" + "\n" +
             "If you want to replace ALL sounds of a given type (Item, NPC), leave the 'key' blank." + "\n" +
             "If you want to mute a sound of the given key, simply set the sound type to 'None'." + "\n" +

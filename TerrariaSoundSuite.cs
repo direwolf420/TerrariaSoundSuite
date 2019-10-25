@@ -53,6 +53,8 @@ namespace TerrariaSoundSuite
         internal static bool revertVolumeSwap = false;
         internal static float oldAmbientVolume = 0f;
 
+        internal static CustomSoundValue defaultSoundValue;
+
         public TerrariaSoundSuite()
         {
 
@@ -62,8 +64,9 @@ namespace TerrariaSoundSuite
         {
             On.Terraria.Main.PlaySound_int_int_int_int_float_float += HookPlaySound;
             playedSounds = new List<DebugSound>();
+            defaultSoundValue = new CustomSoundValue();
             ReflectSound();
-            ReflectSetMessage();
+            ReflectConfig();
             loaded = true;
         }
 
@@ -77,7 +80,7 @@ namespace TerrariaSoundSuite
             }
         }
 
-        internal static void ReflectSetMessage()
+        internal static void ReflectConfig()
         {
             if (setMessageMethod == null)
             {
@@ -91,7 +94,12 @@ namespace TerrariaSoundSuite
 
                     UIModConfigType = ModLoaderAssembly.GetType("Terraria.ModLoader.Config.UI.UIModConfig");
                     setMessageMethod = UIModConfigType.GetMethod("SetMessage", new Type[] { typeof(string), typeof(Color) });
-                    if (setMessageMethod == null) throw new Exception("setMessageMethod is null");
+                    if (setMessageMethod == null) throw new NullReferenceException("setMessageMethod is null");
+
+                    Type type = typeof(UIElement);
+                    isInitializedField = type.GetField("_isInitialized", BindingFlags.Instance | BindingFlags.NonPublic);
+                    IsMouseHoveringField = type.GetField("_isMouseHovering", BindingFlags.Instance | BindingFlags.NonPublic);
+                    modField = UIModConfigType.GetField("mod", BindingFlags.Instance | BindingFlags.NonPublic);
                 }
                 catch (Exception e)
                 {
@@ -99,6 +107,14 @@ namespace TerrariaSoundSuite
                 }
             }
         }
+
+        internal static FieldInfo isInitializedField;
+        internal static FieldInfo IsMouseHoveringField;
+        internal static FieldInfo modField;
+
+        internal static bool IsInitialized => (bool)isInitializedField.GetValue(modConfig);
+        internal static bool IsMouseHovering => (bool)IsMouseHoveringField.GetValue(modConfig);
+        internal static bool IsCurrentMod => ((Mod)modField.GetValue(modConfig)).Name == Instance.Name;
 
         /// <summary>
         /// Accesses the ModConfig message UI text box to push messages
@@ -109,20 +125,10 @@ namespace TerrariaSoundSuite
             {
                 try
                 {
-                    Type type = typeof(UIElement);
-                    FieldInfo isInitializedField = type.GetField("_isInitialized", BindingFlags.Instance | BindingFlags.NonPublic);
-                    if ((bool)isInitializedField.GetValue(modConfig))
+                    //Order is important
+                    if (IsInitialized && IsCurrentMod && IsMouseHovering)
                     {
-                        FieldInfo modField = UIModConfigType.GetField("mod", BindingFlags.Instance | BindingFlags.NonPublic);
-                        string modName = ((Mod)modField.GetValue(modConfig)).Name;
-                        if (modName == Instance.Name)
-                        {
-                            FieldInfo IsMouseHoveringField = type.GetField("_isMouseHovering", BindingFlags.Instance | BindingFlags.NonPublic);
-                            if ((bool)IsMouseHoveringField.GetValue(modConfig))
-                            {
-                                setMessageMethod.Invoke(modConfig, new object[] { text, color });
-                            }
-                        }
+                        setMessageMethod.Invoke(modConfig, new object[] { text, color });
                     }
                 }
                 catch (Exception e)
@@ -130,18 +136,6 @@ namespace TerrariaSoundSuite
                     Instance.Logger.Info("Failed to reflect UIModConfig.mod: " + e);
                 }
             }
-
-            //This code basically translates to
-            //if (modConfig._isInitialized)
-            //{
-            //    if (modConfig.mod.Name == Instance.Name)
-            //    {
-            //        if (modConfig._isMouseHovering)
-            //        {
-            //            modConfig.SetMessage(text, color);
-            //        }
-            //    }
-            //}
         }
 
         public override void Unload()
@@ -149,6 +143,7 @@ namespace TerrariaSoundSuite
             playedSounds = null;
             UIModConfigType = null;
             setMessageMethod = null;
+            defaultSoundValue = null;
             loaded = false;
         }
 
@@ -312,18 +307,19 @@ namespace TerrariaSoundSuite
                 {
                     if (!player.mouseInterface)
                     {
-                        if (!PlayingDebugSound && Main.mouseRight && Main.mouseRightRelease)
+                        if (Main.mouseRight && Main.mouseRightRelease)
                         {
-                            playingDebugStart = true;
-                            playingDebugIndex = i;
-                            int x = -1;
-                            int y = -1;
-                            //if (sound.type == (int)SoundTypeEnum.Waterfall || sound.type == (int)SoundTypeEnum.Lavafall)
-                            //{
-                            //    x = (int)Main.LocalPlayer.Center.X;
-                            //    y = (int)Main.LocalPlayer.Center.Y;
-                            //}
-                            Main.PlaySound(sound.type, x, y, sound.Style, sound.volumeScale, sound.pitchOffset);
+                            PlayDebugSound(sound.type, -1, -1, sound.Style, sound.volumeScale, sound.pitchOffset, i);
+                            //playingDebugStart = true;
+                            //playingDebugIndex = i;
+                            //int x = -1;
+                            //int y = -1;
+                            ////if (sound.type == (int)SoundTypeEnum.Waterfall || sound.type == (int)SoundTypeEnum.Lavafall)
+                            ////{
+                            ////    x = (int)Main.LocalPlayer.Center.X;
+                            ////    y = (int)Main.LocalPlayer.Center.Y;
+                            ////}
+                            //Main.PlaySound(sound.type, x, y, sound.Style, sound.volumeScale, sound.pitchOffset);
                         }
                         else if (Main.mouseLeft && Main.mouseLeftRelease)
                         {
@@ -423,8 +419,6 @@ namespace TerrariaSoundSuite
 
         private SoundEffectInstance HookPlaySound(On.Terraria.Main.orig_PlaySound_int_int_int_int_float_float orig, int type, int x, int y, int Style, float volumeScale, float pitchOffset)
         {
-            if (Main.gameMenu) return orig(type, x, y, Style, volumeScale, pitchOffset);
-
             if (playingDebugStart)
             {
                 playingDebugCounter = playingDebugMax;
@@ -433,7 +427,7 @@ namespace TerrariaSoundSuite
                 return orig(type, x, y, Style, volumeScale, pitchOffset);
             }
 
-            if (type == SoundID.Waterfall || type == SoundID.Lavafall)
+            if (Main.gameMenu || type == SoundID.Waterfall || type == SoundID.Lavafall)
             {
                 return orig(type, x, y, Style, volumeScale, pitchOffset);
             }
@@ -445,7 +439,6 @@ namespace TerrariaSoundSuite
 
             //TODO Can probably make this more compact
             CustomSoundValue custom = null;
-            CustomSoundValue fresh = new CustomSoundValue();
             if (Config.Instance.Item.Active && debug.origin.Valid(SoundType.Item))
             {
                 ItemDefinition nothing = new ItemDefinition(0);
@@ -516,11 +509,7 @@ namespace TerrariaSoundSuite
 
                 if (custom == null && Config.Instance.General.Rule.ContainsKey(customNothingKey))
                 {
-                    //Fix spamming sounds because they use different logic and I cba to copy all of PlaySound
-                    //if (customKey.Type != SoundTypeEnum.Waterfall && customKey.Type != SoundTypeEnum.Lavafall)
-                    //{
-                        custom = Config.Instance.General.Rule[customNothingKey];
-                    //}
+                    custom = Config.Instance.General.Rule[customNothingKey];
                 }
 
                 if (custom != null)
@@ -530,15 +519,9 @@ namespace TerrariaSoundSuite
                         custom.Validate();
                         if (customKey.Type == SoundTypeEnum.None) return null;
                         //Only if not a "default" and if sound exists (mod associated with it loaded)
-                        else if (custom != fresh && custom.Exists().exists) ModifySound(custom, ref type, ref Style, ref volumeScale, ref pitchOffset, ref debug);
+                        else if (custom != defaultSoundValue && custom.Exists().exists) ModifySound(custom, ref type, ref Style, ref volumeScale, ref pitchOffset, ref debug);
                     }
                 }
-            }
-
-            //Cap for volume because vanilla is retarded
-            if (Main.soundVolume * volumeScale > 1f)
-            {
-                volumeScale = Main.soundVolume / volumeScale;
             }
 
             var instance = orig(type, x, y, Style, volumeScale, pitchOffset);
@@ -551,24 +534,50 @@ namespace TerrariaSoundSuite
             return instance;
         }
 
+        #region Red is an ass and we won't be working with him again
+        internal static int FixStyle(int type, int style)
+        {
+            if (type == (int)SoundTypeEnum.ZombieMoan)
+            {
+                ValidStyles styles = CustomSound.GetValidStyles((SoundTypeEnum)type);
+                if (style == styles.others[0]) return NPCID.BloodZombie;
+                else if (style == styles.others[1]) return NPCID.SandShark;
+            }
+            return style;
+        }
+
+        internal static int FixStyle(CustomSoundValue custom) => FixStyle((int)custom.Type, custom.Style);
+
+        internal static int RevertFixStyle(int type, int style)
+        {
+            if (type == (int)SoundTypeEnum.ZombieMoan)
+            {
+                ValidStyles styles = CustomSound.GetValidStyles((SoundTypeEnum)type);
+                if (style == NPCID.BloodZombie) style = styles.others[0];
+                else if (style == NPCID.SandShark) style = styles.others[1];
+            }
+            return style;
+        }
+
+        internal static int RevertFixStyle(CustomSoundValue custom) => RevertFixStyle((int)custom.Type, custom.Style);
+        #endregion
+
         private void ModifySound(CustomSoundValue custom, ref int type, ref int Style, ref float volumeScale, ref float pitchOffset, ref DebugSound debug)
         {
             type = (int)custom.Type;
-            Style = custom.Style;
-            //Blame red
-            if (custom.Type == SoundTypeEnum.ZombieMoan)
-            {
-                if (custom.Style == custom.ValidStyles.others[0]) Style = NPCID.ThePossessed;
-                else if (custom.Style == custom.ValidStyles.others[1]) Style = NPCID.SandShark;
-            }
             volumeScale *= custom.Volume;
             volumeScale = Math.Min(volumeScale, CustomSoundValue.MAX_VOLUME); //Errors happen if it's above limit
+
+            FixVolume(ref volumeScale);
+
             pitchOffset = custom.Pitch;
             DebugSound old = debug;
             debug = new DebugSound(custom, debug, replaced: true)
             {
                 IsReplacing = old
             };
+
+            Style = FixStyle(custom);
 
             AmbientSwap(type);
         }
@@ -605,12 +614,38 @@ namespace TerrariaSoundSuite
             }
         }
 
+        internal static void FixVolume(ref float volumeScale)
+        {
+            //Cap for volume because vanilla is retarded
+            if (Main.soundVolume * volumeScale > 1f)
+            {
+                volumeScale = Main.soundVolume / volumeScale;
+            }
+        }
+
         internal static void RevertAmbientSwap()
         {
             if (revertVolumeSwap)
             {
                 revertVolumeSwap = false;
                 Main.ambientVolume = oldAmbientVolume;
+            }
+        }
+
+        internal static bool PlayDebugSound(int type, int x = -1, int y = -1, int Style = 1, float volumeScale = 1, float pitchOffset = 0, int index = -1)
+        {
+            if (!PlayingDebugSound)
+            {
+                playingDebugStart = true;
+                playingDebugIndex = index;
+                FixVolume(ref volumeScale);
+                Style = FixStyle(type, Style);
+                Main.PlaySound(type, x, y, Style, volumeScale, pitchOffset);
+                return true;
+            }
+            else
+            {
+                return false;
             }
         }
 

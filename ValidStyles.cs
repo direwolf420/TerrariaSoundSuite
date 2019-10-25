@@ -18,9 +18,9 @@ namespace TerrariaSoundSuite
         /// </summary>
         internal List<int> others;
 
-        internal bool Always => start == -1 && length == 0;
+        internal bool Always => start == -1 && length == 0 && (others != null ? others.Count == 0 : true);
 
-        internal int LastValidStyle => Math.Max(start + length - 1, (others != null && length > 0) ? others[others.Count - 1] : -1);
+        internal int LastValidStyle => Math.Max(start + length - 1, (others != null && others.Count > 0) ? others[others.Count - 1] : -1);
 
         internal int FirstValidStyle => Math.Min(start, others != null ? others[0] : start);
 
@@ -44,7 +44,7 @@ namespace TerrariaSoundSuite
 
         public override string ToString()
         {
-            return $"{start} to {length - 1}";
+            return $"{FirstValidStyle} to {LastValidStyle}";
         }
     }
 }

@@ -18,7 +18,6 @@ namespace TerrariaSoundSuite
             Pitch = Pitch;
         }
 
-
         [DefaultValue(true)]
         [Tooltip("If this sound rule should be applied")]
         public bool Enabled { get; set; }

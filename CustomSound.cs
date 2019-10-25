@@ -173,6 +173,35 @@ namespace TerrariaSoundSuite
             }
         }
 
+        private bool _PlaySound;
+
+        [BackgroundColor(0, 255, 0)]
+        [DefaultValue(false)]
+        [Label("Play Sound")]
+        [Tooltip("Click to test this sound")]
+        public bool PlaySound
+        {
+            get
+            {
+                return _PlaySound;
+            }
+            set
+            {
+                if (value)
+                {
+                    if (this is CustomSoundValue custom)
+                    {
+                        TerrariaSoundSuite.PlayDebugSound((int)Type, -1, -1, Style, custom.Volume, custom.Pitch);
+                    }
+                    else
+                    {
+                        TerrariaSoundSuite.PlayDebugSound((int)Type, -1, -1, Style);
+                    }
+                }
+                _PlaySound = false;
+            }
+        }
+
         private string _Path = VANILLA_PATH; //Otherwise it's null
 
         [DefaultValue(VANILLA_PATH)]
@@ -283,7 +312,7 @@ namespace TerrariaSoundSuite
                 case SoundTypeEnum.NPCKilled:
                     return new ValidStyles(0, Main.soundInstanceNPCKilled.Length + safeOverflow);
                 case SoundTypeEnum.ZombieMoan:
-                    return new ValidStyles(-1, others: new List<int> { /*469*/ 0, /*542*/ 1 });
+                    return new ValidStyles(-1, others: new List<int> { /*489*/ 0, /*542*/ 1 });
                 case SoundTypeEnum.Roar:
                     return new ValidStyles(0, Main.soundInstanceRoar.Length, new List<int> { 4 });
                 case SoundTypeEnum.Splash:
@@ -394,7 +423,7 @@ namespace TerrariaSoundSuite
             //4 : soundInstanceNPCKilled.Length
             //5+: deoesn't matter
             //14: 542 -> 7
-            //--- 469 -> (random) 21 to 23
+            //--- 489 -> (random) 21 to 23
             //--- else-> (random) 0 to 2 (all in soundInstanceZombie[num])
             //^^^ special snowflakes
             //15 : soundInstanceRoar[3] but 4 is also accepted, turns into 1 with less pitch
