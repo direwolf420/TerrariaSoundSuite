@@ -313,7 +313,7 @@ namespace TerrariaSoundSuite
                 case SoundTypeEnum.NPCKilled:
                     return new ValidStyles(0, Main.soundInstanceNPCKilled.Length + safeOverflow);
                 case SoundTypeEnum.ZombieMoan:
-                    return new ValidStyles(-1, others: new List<int> { /*489*/ 0, /*542*/ 1 });
+                    return new ValidStyles(-1, others: new List<int> { /*489*/ 0, /*542*/ 2 }); //because 1 is used by vanilla instead of -1 ree
                 case SoundTypeEnum.Roar:
                     return new ValidStyles(0, Main.soundInstanceRoar.Length, new List<int> { 4 });
                 case SoundTypeEnum.Splash:

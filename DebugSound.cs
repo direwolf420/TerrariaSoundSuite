@@ -73,12 +73,12 @@ namespace TerrariaSoundSuite
             }
         }
 
-        internal DebugSound(CustomSoundValue custom, DebugSound other, bool replaced = false) : this((int)custom.Type, other.X, other.Y, custom.Style, custom.Volume, custom.Pitch, replaced)
+        internal DebugSound(CustomSoundValue custom, DebugSound other) : this((int)custom.Type, other.X, other.Y, custom.Style, custom.Volume, custom.Pitch, replaced: true, skipOrigin: true)
         {
-
+            if (replaced) origin = other.origin;
         }
 
-        internal DebugSound(int type, int x, int y, int Style, float volumeScale, float pitchOffset, bool replaced = false)
+        internal DebugSound(int type, int x, int y, int Style, float volumeScale, float pitchOffset, bool replaced = false, bool skipOrigin = false)
         {
             this.type = type;
             worldPos.X = x;
@@ -88,8 +88,7 @@ namespace TerrariaSoundSuite
 
             Style = TerrariaSoundSuite.RevertFixStyle(type, Style);
 
-            if (validStyles.Always) Style = validStyles.FirstValidStyle;
-            if (!validStyles.Contains(Style)) Style = validStyles.FirstValidStyle;
+            if (validStyles.Always || !validStyles.Contains(Style)) Style = validStyles.FirstValidStyle;
 
             this.Style = Style;
             this.volumeScale = volumeScale;
@@ -107,6 +106,18 @@ namespace TerrariaSoundSuite
 
             _Discovered = false;
 
+            GetPathToSound(soundType);
+
+            //Get origin
+            origin = new Origin(soundType, 0, UNKNOWN);
+            if (modded) origin.Name = CUSTOM;
+            if (soundType == SoundType.Custom) origin = new Origin(SoundType.Custom, 0, path.Split(new char[] { '/' }).Last());
+
+            if (!skipOrigin) GetOrigin(soundTypeEnum, Style);
+        }
+
+        internal void GetPathToSound(SoundType soundType)
+        {
             if (Config.Instance.Debug.Verbose && !Config.Instance.Debug.Contains(type, Style))
             {
                 //Get path to sound
@@ -136,14 +147,12 @@ namespace TerrariaSoundSuite
             }
             if (string.IsNullOrEmpty(path)) path = CustomSound.VANILLA_PATH;
             if (string.IsNullOrEmpty(stacktrace)) stacktrace = string.Empty;
+        }
 
-            //Get origin
-            Entity ent;
-            origin = new Origin(soundType, 0, UNKNOWN);
-            if (modded) origin.Name = CUSTOM;
-            if (soundType == SoundType.Custom) origin = new Origin(SoundType.Custom, 0, path.Split(new char[] { '/' }).Last());
-
+        internal void GetOrigin(SoundTypeEnum soundTypeEnum, int style = -1)
+        {
             //TODO origin name not being displayed when sound is replaced
+            Entity ent;
             switch (soundTypeEnum)
             {
                 case SoundTypeEnum.Item:
@@ -159,23 +168,39 @@ namespace TerrariaSoundSuite
                     for (int i = 0; i < Main.maxPlayers; i++)
                     {
                         ent = Main.player[i];
-                        if (ent.active && ent.Hitbox.Contains(new Point(x, y)) && ent is Player player)
+                        if (ent.active && ent.Hitbox.Contains(worldPos.ToPoint()) && ent is Player player)
                         {
                             if (soundTypeEnum == SoundTypeEnum.Item)
                             {
+                                bool flying = player.wings > 0 && player.controlJump;
                                 if (player.HeldItem.type > 0 && player.HeldItem.UseSound != null &&
                                     player.HeldItem.UseSound.Style == Style && player.itemAnimation == player.itemAnimationMax)
                                 {
                                     origin.ThingID = player.HeldItem.type;
                                     origin.Name = player.HeldItem.Name;
-                                    worldPos += new Vector2(4); //This is to offset other sounds that might occur at the same time (maxMana e.g.)
+                                    worldPos += new Vector2(-4); //This is to offset other sounds that might occur at the same time (maxMana e.g.)
+                                }
+                                else if (style == 32) //Wings
+                                {
+                                    if (flying)
+                                    {
+                                        for (int j = 3; j < 8 + player.extraAccessorySlots; j++)
+                                        {
+                                            Item item = player.armor[j];
+                                            if (!item.IsAir && item.wingSlot > 0)
+                                            {
+                                                origin.ThingID = item.type;
+                                                origin.Name = item.Name;
+                                                origin.Ignore = true;
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             else
                             {
                                 if (i == Main.myPlayer) origin.Name = "me";
                                 else origin.Name = player.name;
-                                break;
                             }
                             break;
                         }
@@ -195,7 +220,7 @@ namespace TerrariaSoundSuite
                     for (int i = 0; i < Main.maxNPCs; i++)
                     {
                         ent = Main.npc[i];
-                        if (ent.active && ent.Hitbox.Contains(new Point(x, y)) && ent is NPC npc)
+                        if (ent.active && ent.Hitbox.Contains(worldPos.ToPoint()) && ent is NPC npc)
                         {
                             if (soundTypeEnum == SoundTypeEnum.NPCHit && npc.HitSound != null && npc.HitSound.Style == Style)
                             {
@@ -218,6 +243,8 @@ namespace TerrariaSoundSuite
                     break;
                 case SoundTypeEnum.Grass:
                 case SoundTypeEnum.Mech:
+                case SoundTypeEnum.DoorClosed:
+                case SoundTypeEnum.DoorOpen:
                 case SoundTypeEnum.Tile:
                     Point point = worldPos.ToTileCoordinates();
                     Tile tile = Framing.GetTileSafely(point);
@@ -287,6 +314,45 @@ namespace TerrariaSoundSuite
                     Array.Resize(ref Main.musicFade, nextSound[SoundType.Music]);
          */
 
+        internal SoundType GetModLoaderSoundType(int type)
+        {
+            switch (type)
+            {
+                case 2:
+                    return SoundType.Item;
+                case 3:
+                    return SoundType.NPCHit;
+                case 4:
+                    return SoundType.NPCKilled;
+                case SoundLoader.customSoundType:
+                    return SoundType.Custom;
+                default:
+                    return SoundType.Music; //Hack
+            }
+        }
+
+        internal string OriginToString()
+        {
+            string text = "";
+            if (origin.Name != UNKNOWN)
+            {
+                text += "; Origin:";
+                if (origin.Name != CUSTOM) text += " " + origin;
+            }
+            return text;
+        }
+
+        public override string ToString()
+        {
+            string text = "Type: " + type + " (" + typeName + "); Style: " + Style;
+            text += OriginToString();
+            if (modded) text += " (" + (Config.Instance.Debug.Verbose ? path.Split(new char[] { '/' }).Last() : "Modded") + ")";
+            if (replaced) text += " (Replaced)";
+            return text;
+        }
+
+        internal CustomSound ToCustomSound() => new CustomSound((SoundTypeEnum)type, Style, path);
+
         internal static string GetSoundTypeName(int type)
         {
             string ret = UNKNOWN;
@@ -319,38 +385,6 @@ namespace TerrariaSoundSuite
             }
             return 0;
         }
-
-        internal SoundType GetModLoaderSoundType(int type)
-        {
-            switch (type)
-            {
-                case 2:
-                    return SoundType.Item;
-                case 3:
-                    return SoundType.NPCHit;
-                case 4:
-                    return SoundType.NPCKilled;
-                case SoundLoader.customSoundType:
-                    return SoundType.Custom;
-                default:
-                    return SoundType.Music; //Hack
-            }
-        }
-
-        internal CustomSound ToCustomSound() => new CustomSound((SoundTypeEnum)type, Style, path);
-
-        public override string ToString()
-        {
-            string text = "Type: " + type + " (" + typeName + "); Style: " + Style;
-            if (origin.Name != UNKNOWN)
-            {
-                text += "; Origin:";
-                if (origin.Name != CUSTOM) text += " " + origin;
-            }
-            if (modded) text += " (" + (Config.Instance.Debug.Verbose ? path.Split(new char[] { '/' }).Last() : "Modded") + ")";
-            if (replaced) text += " (Replaced)";
-            return text;
-        }
     }
 
     internal class Origin
@@ -358,15 +392,20 @@ namespace TerrariaSoundSuite
         internal SoundType SoundType;
         internal int ThingID;
         internal string Name;
+        /// <summary>
+        /// Ignore Valid check (so it won't be concidered in the sound replacement for item/npc sounds)
+        /// </summary>
+        internal bool Ignore;
 
         internal Origin(SoundType type, int thingID, string name)
         {
             SoundType = type;
             ThingID = thingID;
             Name = name;
+            Ignore = false;
         }
 
-        internal bool Valid(SoundType otherType) => SoundType == otherType && ThingID > 0 && Name != DebugSound.UNKNOWN;
+        internal bool Valid(SoundType otherType) => !Ignore && SoundType == otherType && ThingID > 0 && Name != DebugSound.UNKNOWN;
 
         public override string ToString() => Name;
     }
@@ -389,7 +428,7 @@ namespace TerrariaSoundSuite
         MenuTick = SoundID.MenuTick,
         Shatter = SoundID.Shatter,
         /// <summary>
-        /// Very special because of 469, 542 -> need to be remapped in Style
+        /// Very special because of 489, 542 -> need to be remapped in FixStyle/RevertFixStyle
         /// </summary>
         ZombieMoan = SoundID.ZombieMoan,
         Roar = SoundID.Roar,

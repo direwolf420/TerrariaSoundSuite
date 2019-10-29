@@ -421,9 +421,7 @@ namespace TerrariaSoundSuite
         {
             if (playingDebugStart)
             {
-                playingDebugCounter = playingDebugMax;
                 playingDebugStart = false;
-                AmbientSwap(type);
                 return orig(type, x, y, Style, volumeScale, pitchOffset);
             }
 
@@ -572,7 +570,7 @@ namespace TerrariaSoundSuite
 
             pitchOffset = custom.Pitch;
             DebugSound old = debug;
-            debug = new DebugSound(custom, debug, replaced: true)
+            debug = new DebugSound(custom, debug)
             {
                 IsReplacing = old
             };
@@ -604,7 +602,7 @@ namespace TerrariaSoundSuite
         /// <summary>
         /// Because sounds that are ambient use this to scale volume instead
         /// </summary>
-        private void AmbientSwap(int type)
+        private static void AmbientSwap(int type)
         {
             if ((type >= 30 && type <= 35) || type == 39)
             {
@@ -637,9 +635,11 @@ namespace TerrariaSoundSuite
             if (!PlayingDebugSound)
             {
                 playingDebugStart = true;
+                playingDebugCounter = playingDebugMax;
                 playingDebugIndex = index;
                 FixVolume(ref volumeScale);
                 Style = FixStyle(type, Style);
+                AmbientSwap(type);
                 Main.PlaySound(type, x, y, Style, volumeScale, pitchOffset);
                 return true;
             }
