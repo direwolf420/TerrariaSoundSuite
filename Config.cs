@@ -9,7 +9,15 @@ namespace TerrariaSoundSuite
     public class Config : ModConfig
     {
         public override ConfigScope Mode => ConfigScope.ClientSide;
-        public static Config Instance => ModContent.GetInstance<Config>();
+        public static Config Instance
+        {
+            get
+            {
+                Config config = ModContent.GetInstance<Config>();
+                if (config == null) ErrorLogger.Log("TESTTEST aaaaaaaaaa config instance is null");
+                return config;
+            }
+        }
 
         [Header("Specific filters")]
 

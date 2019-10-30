@@ -17,7 +17,15 @@ namespace TerrariaSoundSuite
 {
     public class TerrariaSoundSuite : Mod
     {
-        internal static TerrariaSoundSuite Instance => ModContent.GetInstance<TerrariaSoundSuite>();
+        internal static TerrariaSoundSuite Instance
+        {
+            get
+            {
+                TerrariaSoundSuite instance = ModContent.GetInstance<TerrariaSoundSuite>();
+                if (instance == null) ErrorLogger.Log("TESTTEST aaaaaaaaaa Mod instance is null");
+                return instance;
+            }
+        }
 
         internal static float MaxRangeSQ => Main.screenWidth * Main.screenWidth * 6.25f;
         internal static float MaxRange => Main.screenWidth * 2.5f;
@@ -67,7 +75,23 @@ namespace TerrariaSoundSuite
             defaultSoundValue = new CustomSoundValue();
             ReflectSound();
             ReflectConfig();
+            //DebugSound debug = new DebugSound(3, -1, -1, 2, 1f, 0f);
             loaded = true;
+        }
+
+        private static void SetOnTick()
+        {
+            Main.OnTick += CountdownDebug;
+        }
+
+        private static void CountdownDebug()
+        {
+            if (playingDebugCounter > 0) playingDebugCounter--;
+            else if (playingDebugCounter <= 0)
+            {
+                playingDebugIndex = -1;
+                Main.OnTick -= CountdownDebug;
+            }
         }
 
         internal static void ReflectSound()
@@ -636,6 +660,7 @@ namespace TerrariaSoundSuite
             {
                 playingDebugStart = true;
                 playingDebugCounter = playingDebugMax;
+                SetOnTick();
                 playingDebugIndex = index;
                 FixVolume(ref volumeScale);
                 Style = FixStyle(type, Style);

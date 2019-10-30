@@ -8,9 +8,6 @@ namespace TerrariaSoundSuite
     {
         public override void PostUpdate()
         {
-            if (TerrariaSoundSuite.playingDebugCounter > 0) TerrariaSoundSuite.playingDebugCounter--;
-            else if (TerrariaSoundSuite.playingDebugCounter == 0) TerrariaSoundSuite.playingDebugIndex = -1;
-
             if (TerrariaSoundSuite.enqueueTimer > 0) TerrariaSoundSuite.enqueueTimer--;
             TerrariaSoundSuite.RevertAmbientSwap();
         }

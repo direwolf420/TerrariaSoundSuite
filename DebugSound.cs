@@ -118,6 +118,26 @@ namespace TerrariaSoundSuite
 
         internal void GetPathToSound(SoundType soundType)
         {
+            int i = 0;
+            //return;
+            if (TerrariaSoundSuite.Instance == null) ErrorLogger.Log("TESTTEST aaaaaaa");
+            if (Config.Instance == null)
+            {
+                TerrariaSoundSuite.Instance.Logger.Warn("########### Config Instance is null");
+                return;
+            }
+            if (Config.Instance.Debug == null)
+            {
+                TerrariaSoundSuite.Instance.Logger.Warn("########### Debug is null");
+            }
+            if (Config.Instance.Debug.Blacklist == null)
+            {
+                TerrariaSoundSuite.Instance.Logger.Warn("########### list is null ");
+            }
+            else
+            {
+                TerrariaSoundSuite.Instance.Logger.Warn("########### sound: " + new CustomSound((SoundTypeEnum)type, Style));
+            }
             if (Config.Instance.Debug.Verbose && !Config.Instance.Debug.Contains(type, Style))
             {
                 //Get path to sound

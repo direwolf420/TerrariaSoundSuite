@@ -11,7 +11,9 @@ namespace TerrariaSoundSuite
         /// Exclusive index (start + length)
         /// </summary>
         // 0 + 5 means index 0 to 4 is valid
-        internal int length;
+        private readonly int length;
+
+        internal int Length => length + (others != null ? others.Count : 0);
 
         /// <summary>
         /// Sorted list
@@ -37,7 +39,7 @@ namespace TerrariaSoundSuite
 
         internal bool Contains(int style)
         {
-            if ((style >= start && style < start + length) ||
+            if ((style >= start && style <= Length) ||
                 (others != null ? others.BinarySearch(style) > -1 : true)) return true;
             return false;
         }
