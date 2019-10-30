@@ -17,15 +17,7 @@ namespace TerrariaSoundSuite
 {
     public class TerrariaSoundSuite : Mod
     {
-        internal static TerrariaSoundSuite Instance
-        {
-            get
-            {
-                TerrariaSoundSuite instance = ModContent.GetInstance<TerrariaSoundSuite>();
-                if (instance == null) ErrorLogger.Log("TESTTEST aaaaaaaaaa Mod instance is null");
-                return instance;
-            }
-        }
+        internal static TerrariaSoundSuite Instance => ModContent.GetInstance<TerrariaSoundSuite>();
 
         internal static float MaxRangeSQ => Main.screenWidth * Main.screenWidth * 6.25f;
         internal static float MaxRange => Main.screenWidth * 2.5f;
@@ -75,11 +67,10 @@ namespace TerrariaSoundSuite
             defaultSoundValue = new CustomSoundValue();
             ReflectSound();
             ReflectConfig();
-            //DebugSound debug = new DebugSound(3, -1, -1, 2, 1f, 0f);
             loaded = true;
         }
 
-        private static void SetOnTick()
+        private static void StartCountdown()
         {
             Main.OnTick += CountdownDebug;
         }
@@ -443,6 +434,11 @@ namespace TerrariaSoundSuite
 
         private SoundEffectInstance HookPlaySound(On.Terraria.Main.orig_PlaySound_int_int_int_int_float_float orig, int type, int x, int y, int Style, float volumeScale, float pitchOffset)
         {
+            //if (type != SoundID.Waterfall && type != SoundID.Lavafall)
+            //{
+            //    ErrorLogger.Log($"from dmd: {type}, {Style}, {volumeScale}, {pitchOffset}");
+            //}
+
             if (playingDebugStart)
             {
                 playingDebugStart = false;
@@ -590,7 +586,7 @@ namespace TerrariaSoundSuite
             volumeScale *= custom.Volume;
             volumeScale = Math.Min(volumeScale, CustomSoundValue.MAX_VOLUME); //Errors happen if it's above limit
 
-            FixVolume(ref volumeScale);
+            volumeScale = FixVolume(type, volumeScale);
 
             pitchOffset = custom.Pitch;
             DebugSound old = debug;
@@ -636,13 +632,21 @@ namespace TerrariaSoundSuite
             }
         }
 
-        internal static void FixVolume(ref float volumeScale)
+        internal static float FixVolume(int type, float volumeScale)
         {
             //Cap for volume because vanilla is retarded
             if (Main.soundVolume * volumeScale > 1f)
             {
                 volumeScale = Main.soundVolume / volumeScale;
             }
+            //Meowmere sound is weird
+            //if (type == (int)SoundTypeEnum.Meowmere)
+            //{
+            //    int a = 0;
+            //    //volumeScale *= 0.01f;
+            //    ErrorLogger.Log("VOLUME: " + volumeScale);
+            //}
+            return volumeScale;
         }
 
         internal static void RevertAmbientSwap()
@@ -660,9 +664,9 @@ namespace TerrariaSoundSuite
             {
                 playingDebugStart = true;
                 playingDebugCounter = playingDebugMax;
-                SetOnTick();
+                StartCountdown();
                 playingDebugIndex = index;
-                FixVolume(ref volumeScale);
+                volumeScale = FixVolume(type, volumeScale);
                 Style = FixStyle(type, Style);
                 AmbientSwap(type);
                 Main.PlaySound(type, x, y, Style, volumeScale, pitchOffset);

@@ -118,26 +118,30 @@ namespace TerrariaSoundSuite
 
         internal void GetPathToSound(SoundType soundType)
         {
-            int i = 0;
-            //return;
-            if (TerrariaSoundSuite.Instance == null) ErrorLogger.Log("TESTTEST aaaaaaa");
-            if (Config.Instance == null)
-            {
-                TerrariaSoundSuite.Instance.Logger.Warn("########### Config Instance is null");
-                return;
-            }
-            if (Config.Instance.Debug == null)
-            {
-                TerrariaSoundSuite.Instance.Logger.Warn("########### Debug is null");
-            }
-            if (Config.Instance.Debug.Blacklist == null)
-            {
-                TerrariaSoundSuite.Instance.Logger.Warn("########### list is null ");
-            }
-            else
-            {
-                TerrariaSoundSuite.Instance.Logger.Warn("########### sound: " + new CustomSound((SoundTypeEnum)type, Style));
-            }
+            //if (TerrariaSoundSuite.Instance == null)
+            //{
+            //    ErrorLogger.Log("########");
+            //    ErrorLogger.Log($"from path: {type}, {Style}, {volumeScale}, {pitchOffset}");
+            //    ErrorLogger.Log("TESTTEST aaaaaaa");
+            //    ErrorLogger.Log("########");
+            //}
+            //if (Config.Instance == null)
+            //{
+            //    TerrariaSoundSuite.Instance.Logger.Warn("########### Config Instance is null");
+            //    return;
+            //}
+            //if (Config.Instance.Debug == null)
+            //{
+            //    TerrariaSoundSuite.Instance.Logger.Warn("########### Debug is null");
+            //}
+            //if (Config.Instance.Debug.Blacklist == null)
+            //{
+            //    TerrariaSoundSuite.Instance.Logger.Warn("########### list is null ");
+            //}
+            //else
+            //{
+            //    //TerrariaSoundSuite.Instance.Logger.Warn("########### sound: " + new CustomSound((SoundTypeEnum)type, Style));
+            //}
             if (Config.Instance.Debug.Verbose && !Config.Instance.Debug.Contains(type, Style))
             {
                 //Get path to sound
@@ -384,6 +388,7 @@ namespace TerrariaSoundSuite
             {
                 if (type == SoundID.Waterfall) ret = "Waterfall";
                 if (type == SoundID.Lavafall) ret = "Lavafall";
+                if (type == SoundID.Meowmere) ret = "Meowmere";
             }
             return ret;
         }
@@ -473,7 +478,7 @@ namespace TerrariaSoundSuite
         //Waterfall = SoundID.Waterfall,
         //Lavafall = SoundID.Lavafall,
         ForceRoar = SoundID.ForceRoar,
-        Meowmere = SoundID.Meowmere,
+        //Meowmere = SoundID.Meowmere,
         CoinPickup = SoundID.CoinPickup,
         Drip = SoundID.Drip,
         Camera = SoundID.Camera,

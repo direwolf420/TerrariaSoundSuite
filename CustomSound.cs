@@ -329,8 +329,8 @@ namespace TerrariaSoundSuite
                 //    return new ValidStyles(0, 50 + 1);
                 case SoundTypeEnum.ForceRoar:
                     return new ValidStyles(-1, Main.soundInstanceRoar.Length);
-                case SoundTypeEnum.Meowmere:
-                    return new ValidStyles(5, 5 + 1);
+                //case SoundTypeEnum.Meowmere:
+                //    return new ValidStyles(5, 5 + 1);
                 case SoundTypeEnum.Drip:
                     return new ValidStyles(0, Main.soundInstanceDrip.Length);
                 case SoundTypeEnum.TrackableDD2:

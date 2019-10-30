@@ -5,19 +5,11 @@ using Terraria.ModLoader.Config;
 
 namespace TerrariaSoundSuite
 {
-    //TODO make preview sound when clicking some button in the UI
     public class Config : ModConfig
     {
         public override ConfigScope Mode => ConfigScope.ClientSide;
-        public static Config Instance
-        {
-            get
-            {
-                Config config = ModContent.GetInstance<Config>();
-                if (config == null) ErrorLogger.Log("TESTTEST aaaaaaaaaa config instance is null");
-                return config;
-            }
-        }
+
+        public static Config Instance => ModContent.GetInstance<Config>();
 
         [Header("Specific filters")]
 
