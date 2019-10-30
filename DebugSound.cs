@@ -388,7 +388,7 @@ namespace TerrariaSoundSuite
             {
                 if (type == SoundID.Waterfall) ret = "Waterfall";
                 if (type == SoundID.Lavafall) ret = "Lavafall";
-                if (type == SoundID.Meowmere) ret = "Meowmere";
+                //if (type == SoundID.Meowmere) ret = "Meowmere";
             }
             return ret;
         }
@@ -478,7 +478,7 @@ namespace TerrariaSoundSuite
         //Waterfall = SoundID.Waterfall,
         //Lavafall = SoundID.Lavafall,
         ForceRoar = SoundID.ForceRoar,
-        //Meowmere = SoundID.Meowmere,
+        Meowmere = SoundID.Meowmere,
         CoinPickup = SoundID.CoinPickup,
         Drip = SoundID.Drip,
         Camera = SoundID.Camera,
