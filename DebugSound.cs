@@ -184,6 +184,7 @@ namespace TerrariaSoundSuite
                 case SoundTypeEnum.FemaleHit:
                 case SoundTypeEnum.PlayerKilled:
                 case SoundTypeEnum.MaxMana:
+                case SoundTypeEnum.DoubleJump:
                     if (soundTypeEnum != SoundTypeEnum.Item && Main.netMode == NetmodeID.SinglePlayer)
                     {
                         origin.Name = "me";
@@ -233,6 +234,7 @@ namespace TerrariaSoundSuite
                 case SoundTypeEnum.NPCHit:
                 case SoundTypeEnum.NPCKilled:
                 case SoundTypeEnum.Roar:
+                case SoundTypeEnum.ForceRoar:
                 case SoundTypeEnum.Zombie:
                 case SoundTypeEnum.ZombieMoan:
                 case SoundTypeEnum.Mummy:
@@ -241,27 +243,41 @@ namespace TerrariaSoundSuite
                 case SoundTypeEnum.Frog:
                 case SoundTypeEnum.Bird:
                 case SoundTypeEnum.Critter:
+                case SoundTypeEnum.Chat:
+                case SoundTypeEnum.Splash:
                     for (int i = 0; i < Main.maxNPCs; i++)
                     {
                         ent = Main.npc[i];
-                        if (ent.active && ent.Hitbox.Contains(worldPos.ToPoint()) && ent is NPC npc)
+                        if (ent.active && ent is NPC npc)
                         {
-                            if (soundTypeEnum == SoundTypeEnum.NPCHit && npc.HitSound != null && npc.HitSound.Style == Style)
+                            if (soundTypeEnum == SoundTypeEnum.Chat)
                             {
-                                origin.ThingID = npc.type;
-                                origin.Name = npc.GivenOrTypeName;
+                                if (npc.townNPC && Main.LocalPlayer.talkNPC == i)
+                                {
+                                    origin.ThingID = npc.type;
+                                    origin.Name = npc.FullName;
+                                    break;
+                                }
                             }
-                            else if (soundTypeEnum == SoundTypeEnum.NPCKilled && npc.DeathSound != null && npc.DeathSound.Style == Style)
+                            else if (ent.Hitbox.Contains(worldPos.ToPoint()))
                             {
-                                origin.ThingID = npc.type;
-                                origin.Name = npc.GivenOrTypeName;
-                                worldPos += new Vector2(4); //This is to offset the hitsound and deathsound position
+                                if (soundTypeEnum == SoundTypeEnum.NPCHit && npc.HitSound != null && npc.HitSound.Style == Style)
+                                {
+                                    origin.ThingID = npc.type;
+                                    origin.Name = npc.GivenOrTypeName;
+                                }
+                                else if (soundTypeEnum == SoundTypeEnum.NPCKilled && npc.DeathSound != null && npc.DeathSound.Style == Style)
+                                {
+                                    origin.ThingID = npc.type;
+                                    origin.Name = npc.GivenOrTypeName;
+                                    worldPos += new Vector2(4); //This is to offset the hitsound and deathsound position
+                                }
+                                else
+                                {
+                                    origin.Name = npc.GivenOrTypeName;
+                                }
+                                break;
                             }
-                            else
-                            {
-                                origin.Name = npc.GivenOrTypeName;
-                            }
-                            break;
                         }
                     }
                     break;
@@ -275,7 +291,8 @@ namespace TerrariaSoundSuite
                     if (tile.active())
                     {
                         //Credit to jopojelly (WorldgenPreviewer)
-                        string text = Lang._mapLegendCache.FromTile(Main.Map[point.X, point.Y], point.X, point.Y);
+                        string text = "";
+                        if (tile.type < TileID.Count) text = Lang._mapLegendCache.FromTile(Main.Map[point.X, point.Y], point.X, point.Y);
                         if (text == string.Empty)
                         {
                             if (tile.type < TileID.Count)
