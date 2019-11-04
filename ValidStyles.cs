@@ -39,8 +39,8 @@ namespace TerrariaSoundSuite
 
         internal bool Contains(int style)
         {
-            if ((style >= start && style <= Length) ||
-                (others != null ? others.BinarySearch(style) > -1 : true)) return true;
+            if ((style >= start && style <= start + Length) ||
+                (others != null ? others.BinarySearch(style) > -1 : false)) return true;
             return false;
         }
 

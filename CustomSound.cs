@@ -190,13 +190,21 @@ namespace TerrariaSoundSuite
             {
                 if (value)
                 {
-                    if (this is CustomSoundValue custom)
+                    if (!ValidStyles.Contains(_Style) && TerrariaSoundSuite.loaded)
                     {
-                        TerrariaSoundSuite.PlayDebugSound((int)Type, -1, -1, Style, custom.Volume, custom.Pitch);
+                        TerrariaSoundSuite.SetMessage("This style isn't supported for '"+ Type + "'. Change the style", Color.Orange);
                     }
                     else
                     {
-                        TerrariaSoundSuite.PlayDebugSound((int)Type, -1, -1, Style);
+                        TerrariaSoundSuite.SetMessage("", Color.White);
+                        if (this is CustomSoundValue custom)
+                        {
+                            TerrariaSoundSuite.PlayDebugSound((int)Type, -1, -1, Style, custom.Volume, custom.Pitch);
+                        }
+                        else
+                        {
+                            TerrariaSoundSuite.PlayDebugSound((int)Type, -1, -1, Style);
+                        }
                     }
                 }
                 _PlaySound = false;
