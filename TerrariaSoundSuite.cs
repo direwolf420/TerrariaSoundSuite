@@ -169,7 +169,7 @@ namespace TerrariaSoundSuite
 
         public override void ModifyInterfaceLayers(List<GameInterfaceLayer> layers)
         {
-            if (Main.gameMenu || Main.gamePaused || !Config.Instance.Debug.Active) return;
+            if (Main.gameMenu || !Config.Instance.Debug.Active) return;
             int InventoryIndex = layers.FindIndex(layer => layer.Name.Equals("Vanilla: Inventory"));
             if (InventoryIndex != -1)
             {
@@ -210,7 +210,7 @@ namespace TerrariaSoundSuite
                 sound = playedSounds[i];
                 sounds.Add(sound);
                 int size = 24;
-                if (Utils.CenteredRectangle(sound.worldPos, new Vector2(size)).Contains(new Point((int)Main.MouseWorld.X, (int)Main.MouseWorld.Y)) && sound.Discovered)
+                if (sound.Discovered && Utils.CenteredRectangle(sound.worldPos, new Vector2(size)).Contains(new Point((int)Main.MouseWorld.X, (int)Main.MouseWorld.Y)))
                 {
                     hoverIndex = i;
                 }
@@ -280,6 +280,11 @@ namespace TerrariaSoundSuite
                 xPosition += 2 * 47;
                 yPosition = 76 + 40 + 4 * 47;
             }
+            if (player.chest != -1 || Main.npcShop != 0)
+            {
+                //Y offset when chest or shop open
+                yPosition = 76 + 40 + 4 * 47 + 4 * 40;
+            }
 
             float fade = enqueueTimer / (float)enqueueTimerMax;
             string text = "[" + "DEBUG" + "] Last Played Sounds:";
@@ -325,16 +330,6 @@ namespace TerrariaSoundSuite
                         if (Main.mouseRight && Main.mouseRightRelease)
                         {
                             PlayDebugSound(sound.type, -1, -1, sound.Style, sound.volumeScale, sound.pitchOffset, i);
-                            //playingDebugStart = true;
-                            //playingDebugIndex = i;
-                            //int x = -1;
-                            //int y = -1;
-                            ////if (sound.type == (int)SoundTypeEnum.Waterfall || sound.type == (int)SoundTypeEnum.Lavafall)
-                            ////{
-                            ////    x = (int)Main.LocalPlayer.Center.X;
-                            ////    y = (int)Main.LocalPlayer.Center.Y;
-                            ////}
-                            //Main.PlaySound(sound.type, x, y, sound.Style, sound.volumeScale, sound.pitchOffset);
                         }
                         else if (Main.mouseLeft && Main.mouseLeftRelease)
                         {
@@ -434,11 +429,6 @@ namespace TerrariaSoundSuite
 
         private SoundEffectInstance HookPlaySound(On.Terraria.Main.orig_PlaySound_int_int_int_int_float_float orig, int type, int x, int y, int Style, float volumeScale, float pitchOffset)
         {
-            //if (type != SoundID.Waterfall && type != SoundID.Lavafall)
-            //{
-            //    ErrorLogger.Log($"from dmd: {type}, {Style}, {volumeScale}, {pitchOffset}");
-            //}
-
             if (playingDebugStart)
             {
                 playingDebugStart = false;
@@ -639,13 +629,6 @@ namespace TerrariaSoundSuite
             {
                 volumeScale = Main.soundVolume / volumeScale;
             }
-            //Meowmere sound is weird
-            //if (type == (int)SoundTypeEnum.Meowmere)
-            //{
-            //    int a = 0;
-            //    //volumeScale *= 0.01f;
-            //    ErrorLogger.Log("VOLUME: " + volumeScale);
-            //}
             return volumeScale;
         }
 
