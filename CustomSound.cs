@@ -46,7 +46,7 @@ namespace TerrariaSoundSuite
                 //Path only then not empty if it's a valid SoundType, but safety check anyway
                 if (SoundType != SoundType.Music)
                 {
-                    if (TerrariaSoundSuite.sounds[SoundType].TryGetValue(Path, out int style))
+                    if (Data.sounds[SoundType].TryGetValue(Path, out int style))
                     {
                         return (true, style);
                     }
@@ -137,7 +137,7 @@ namespace TerrariaSoundSuite
                 //bool modItBelongsToUnloaded = false;
                 if (Modded && TerrariaSoundSuite.loaded)
                 {
-                    var kvp = TerrariaSoundSuite.sounds[SoundType].FirstOrDefault(s => s.Key == Path);
+                    var kvp = Data.sounds[SoundType].FirstOrDefault(s => s.Key == Path);
                     //Don't reset current path if it doesn't exist (aka mod unloaded that the Path belonged to)
                     if (kvp.Key != null)
                     {
@@ -146,7 +146,7 @@ namespace TerrariaSoundSuite
                     }
                     else
                     {
-                        TerrariaSoundSuite.SetMessage("This specific sound won't play (because its mod is unloaded). Change to different type", Color.Orange);
+                        Meth.SetMessage("This specific sound won't play (because its mod is unloaded). Change to different type", Color.Orange);
                     }
                 }
                 if (!(Modded && ValidStyles.LastValidStyle <= 0))
@@ -159,7 +159,7 @@ namespace TerrariaSoundSuite
                 {
                     if (Path == VANILLA_PATH) //Default: assign new path if there is one
                     {
-                        var kvp = TerrariaSoundSuite.sounds[SoundType].FirstOrDefault(s => s.Value == _Style);
+                        var kvp = Data.sounds[SoundType].FirstOrDefault(s => s.Value == _Style);
                         if (kvp.Key != null)
                         {
                             Path = kvp.Key;
@@ -192,18 +192,18 @@ namespace TerrariaSoundSuite
                 {
                     if (!ValidStyles.Contains(_Style) && TerrariaSoundSuite.loaded)
                     {
-                        TerrariaSoundSuite.SetMessage("This style isn't supported for '"+ Type + "'. Change the style", Color.Orange);
+                        Meth.SetMessage("This style isn't supported for '"+ Type + "'. Change the style", Color.Orange);
                     }
                     else
                     {
-                        TerrariaSoundSuite.SetMessage("", Color.White);
+                        Meth.SetMessage("", Color.White);
                         if (this is CustomSoundValue custom)
                         {
-                            TerrariaSoundSuite.PlayDebugSound((int)Type, -1, -1, Style, custom.Volume, custom.Pitch);
+                            Meth.PlayDebugSound((int)Type, -1, -1, Style, custom.Volume, custom.Pitch);
                         }
                         else
                         {
-                            TerrariaSoundSuite.PlayDebugSound((int)Type, -1, -1, Style);
+                            Meth.PlayDebugSound((int)Type, -1, -1, Style);
                         }
                     }
                 }
@@ -281,10 +281,10 @@ namespace TerrariaSoundSuite
             }
             catch (Exception e)
             {
-                TerrariaSoundSuite.Instance.Logger.Info("########");
-                TerrariaSoundSuite.Instance.Logger.Info("Couldn't convert config key element: " + e);
-                TerrariaSoundSuite.Instance.Logger.Info("String: " + s);
-                TerrariaSoundSuite.Instance.Logger.Info("########");
+                Meth.Log("########");
+                Meth.Log("Couldn't convert config key element: " + e);
+                Meth.Log("String: " + s);
+                Meth.Log("########");
             }
             return custom;
         }
@@ -344,9 +344,9 @@ namespace TerrariaSoundSuite
                 case SoundTypeEnum.TrackableDD2:
                     return new ValidStyles(0, SoundID.TrackableLegacySoundCount);
                 case SoundTypeEnum.Custom:
-                    TerrariaSoundSuite.ReflectSound();
+                    Reflections.ReflectSound();
                     //It sets length to 0 if there's no custom sounds loaded, kinda checked in get of Style
-                    return new ValidStyles(0, TerrariaSoundSuite.sounds[SoundType.Custom].Count + safeOverflow);
+                    return new ValidStyles(0, Data.sounds[SoundType.Custom].Count + safeOverflow);
                 //case SoundTypeEnum.Tile:
                 //case SoundTypeEnum.PlayerKilled:
                 //case SoundTypeEnum.Grass:

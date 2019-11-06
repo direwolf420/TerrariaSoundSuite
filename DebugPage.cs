@@ -59,10 +59,10 @@ namespace TerrariaSoundSuite
                 _TrackedSoundsCount = Utils.Clamp(value, MIN_TRACKED, MAX_TRACKED);
                 if (TerrariaSoundSuite.loaded)
                 {
-                    int oldCount = TerrariaSoundSuite.playedSounds.Count;
+                    int oldCount = Data.playedSounds.Count;
                     if (oldCount > _TrackedSoundsCount)
                     {
-                        TerrariaSoundSuite.playedSounds.RemoveRange(0, oldCount - _TrackedSoundsCount);
+                        Data.playedSounds.RemoveRange(0, oldCount - _TrackedSoundsCount);
                     }
                 }
             }

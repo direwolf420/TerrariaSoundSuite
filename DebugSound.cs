@@ -39,7 +39,7 @@ namespace TerrariaSoundSuite
             }
             set
             {
-                _HoverTime = Utils.Clamp(value, 0, TerrariaSoundSuite.hoverTimeMax);
+                _HoverTime = Utils.Clamp(value, 0, Data.hoverTimeMax);
             }
         }
 
@@ -86,7 +86,7 @@ namespace TerrariaSoundSuite
             SoundTypeEnum soundTypeEnum = (SoundTypeEnum)type;
             ValidStyles validStyles = CustomSound.GetValidStyles(soundTypeEnum);
 
-            Style = TerrariaSoundSuite.RevertFixStyle(type, Style);
+            Style = Meth.RevertFixStyle(type, Style);
 
             if (validStyles.Always || !validStyles.Contains(Style)) Style = validStyles.FirstValidStyle;
 
@@ -148,7 +148,7 @@ namespace TerrariaSoundSuite
                 //Credit to jopojelly
                 if (modded)
                 {
-                    var kvp = TerrariaSoundSuite.sounds[soundType].FirstOrDefault(s => s.Value == Style);
+                    var kvp = Data.sounds[soundType].FirstOrDefault(s => s.Value == Style);
                     if (kvp.Key != null)
                     {
                         path = kvp.Key;
