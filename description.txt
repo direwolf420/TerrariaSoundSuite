@@ -5,4 +5,4 @@ This clientside mod comes with an extensive config (found under "Mod Configurati
 It also allows you to "see" sounds, which comes in handy for people with hearing impairment, called "Deaf Mode".
 To use this mod to its fullest capabilities, use the "Inspect Mode".
 
-An explanation of the config and the sounds can be found on the homepage.
+An explanation of the config and the sounds, aswell as a changelog, can be found on the homepage.
