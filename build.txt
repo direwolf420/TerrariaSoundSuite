@@ -1,5 +1,5 @@
 author = direwolf420
-version = 0.1.2.2
+version = 0.1.2.3
 displayName = Terraria Sound Suite
 hideCode = true
 homepage = https://forums.terraria.org/index.php?threads/terraria-sound-suite-customize-all-ingame-sounds-and-more.83611/

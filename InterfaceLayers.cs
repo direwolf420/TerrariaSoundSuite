@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Terraria;
+using Terraria.ModLoader;
 using Terraria.UI;
 using Terraria.UI.Chat;
 
@@ -12,6 +13,9 @@ namespace TerrariaSoundSuite
 {
     internal static class InterfaceLayers
     {
+        internal const int INVENTORY_SIZE = 47;
+        internal const int SHOP_SIZE = 40;
+
         internal static string Name => Data.Instance.Name;
 
         private static Color FadeBetween(Color c0, Color c1, float fade) => fade == 0f ? c0 : new Color(c0.ToVector4() * (1f - fade) + c1.ToVector4() * fade);
@@ -26,6 +30,50 @@ namespace TerrariaSoundSuite
                 }
             }
             Main.spriteBatch.DrawString(Main.fontItemStack, text, pos, color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+        }
+
+        /// <summary>
+        /// Also draws the "[DEBUG]"
+        /// </summary>
+        private static void SetupDrawLocation(Player player, int size, ref int x, ref int y, ref float fade, ref string text)
+        {
+            if (Main.playerInventory)
+            {
+                //So it doesn't overlap with inventory and recipe UI
+                x += 2 * INVENTORY_SIZE;
+                y += 4 * INVENTORY_SIZE;
+
+                if (player.chest != -1 || Main.npcShop != 0)
+                {
+                    //Y offset when chest or shop open
+                    y += 4 * SHOP_SIZE;
+                }
+            }
+            else
+            {
+                int buffsPerLine = 11;
+                int lineOffset = 0;
+                for (int b = buffsPerLine; b < player.buffType.Length; b += buffsPerLine)
+                {
+                    if (player.buffType[b] > 0)
+                    {
+                        lineOffset = b / buffsPerLine;
+                    }
+                }
+                y += lineOffset * 50 + Main.buffTexture[1].Height;
+                if (ModLoader.GetMod("ThoriumMod") != null)
+                {
+                    //Bard buffs bar
+                    y += 16;
+                }
+            }
+
+            fade = Data.enqueueTimer / (float)Data.enqueueTimerMax;
+            text = "[" + "DEBUG" + "] Last Played Sounds:";
+            if (Data.playedSounds.Count == 0) text += " None";
+            Color color = FadeBetween(Color.White, Color.Green, fade);
+            DrawDebugText(text, new Vector2(x, y), color);
+            y += size;
         }
 
         internal static void ModifyInterfaceLayers(List<GameInterfaceLayer> layers)
@@ -120,39 +168,14 @@ namespace TerrariaSoundSuite
         {
             //Credit to jopojelly (heavily adjusted from SummonersAssociation)
             Player player = Main.LocalPlayer;
-            int xPosition;
-            int yPosition;
-            Color color;
-            int buffsPerLine = 11;
-            int lineOffset = 0;
+            int xPosition = 32;
+            int yPosition = 76 + SHOP_SIZE;
             int size = 24;
-            for (int b = buffsPerLine; b < player.buffType.Length; ++b)
-            {
-                if (player.buffType[b] > 0)
-                {
-                    lineOffset = b / buffsPerLine;
-                }
-            }
-            xPosition = 32;
-            yPosition = 76 + 40 + lineOffset * 50 + Main.buffTexture[1].Height;
-            if (Main.playerInventory)
-            {
-                //So it doesn't overlap with inventory and recipe UI
-                xPosition += 2 * 47;
-                yPosition = 76 + 40 + 4 * 47;
-            }
-            if (player.chest != -1 || Main.npcShop != 0)
-            {
-                //Y offset when chest or shop open
-                yPosition = 76 + 40 + 4 * 47 + 4 * 40;
-            }
+            Color color;
+            float fade = 0f;
+            string text = "";
 
-            float fade = Data.enqueueTimer / (float)Data.enqueueTimerMax;
-            string text = "[" + "DEBUG" + "] Last Played Sounds:";
-            if (Data.playedSounds.Count == 0) text += " None";
-            color = FadeBetween(Color.White, Color.Green, fade);
-            DrawDebugText(text, new Vector2(xPosition, yPosition), color);
-            yPosition += size;
+            SetupDrawLocation(player, size, ref xPosition, ref yPosition, ref fade, ref text);
 
             bool newMouseInterface = false;
 
@@ -226,9 +249,10 @@ namespace TerrariaSoundSuite
 
             if (Data.hoverIndex != -1 && !player.mouseInterface)
             {
+                DebugSound hover = Data.playedSounds[Data.hoverIndex];
                 Vector2 vector = Main.ThickMouse ? new Vector2(16) : new Vector2(10);
                 vector += Main.MouseScreen;
-                ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, "Left click to " + (Data.playedSounds[Data.hoverIndex].Tracked ? "un" : "") + "track sound", vector, Color.White, 0f, Vector2.Zero, Vector2.One);
+                ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, "Left click to " + (hover.Tracked ? "un" : "") + "track sound", vector, Color.White, 0f, Vector2.Zero, Vector2.One);
                 vector.Y += 28;
                 ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, "Right click to play sound", vector, Color.White, 0f, Vector2.Zero, Vector2.One);
             }

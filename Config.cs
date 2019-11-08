@@ -57,7 +57,6 @@ namespace TerrariaSoundSuite
                 new CustomSound(SoundTypeEnum.Tink),
                 new CustomSound(SoundTypeEnum.Run),
                 new CustomSound(SoundTypeEnum.CoinPickup)
-                //new CustomSound(SoundTypeEnum.Grab)
             }
         };
 
