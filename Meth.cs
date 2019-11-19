@@ -1,16 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Audio;
-using Microsoft.Xna.Framework.Graphics;
-using ReLogic.Graphics;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
-using Terraria.ModLoader.Config;
-using Terraria.UI;
-using Terraria.UI.Chat;
 
 namespace TerrariaSoundSuite
 {
@@ -53,7 +45,6 @@ namespace TerrariaSoundSuite
         {
             type = (int)custom.Type;
             volumeScale *= custom.Volume;
-            volumeScale = Math.Min(volumeScale, CustomSoundValue.MAX_VOLUME); //Errors happen if it's above limit
 
             volumeScale = FixVolume(type, volumeScale);
 
@@ -103,6 +94,7 @@ namespace TerrariaSoundSuite
 
         internal static float FixVolume(int type, float volumeScale)
         {
+            volumeScale = Math.Min(volumeScale, CustomSoundValue.MAX_VOLUME);
             //Cap for volume because vanilla is retarded
             if (Main.soundVolume * volumeScale > 1f)
             {

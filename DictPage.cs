@@ -18,7 +18,7 @@ namespace TerrariaSoundSuite
 
         public override string ToString()
         {
-            return $"{ nameof(Active)}: {(Active ? "Yes" : "No")}, #Rules: {Rule.Count}, #Enabled: {EnabledCount}";
+            return $"{nameof(Active)}: {(Active ? "Yes" : "No")}, #Rules: {Rule.Count}, #Enabled: {EnabledCount}";
         }
 
         public override bool Equals(object obj)

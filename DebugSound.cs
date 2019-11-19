@@ -118,30 +118,6 @@ namespace TerrariaSoundSuite
 
         internal void GetPathToSound(SoundType soundType)
         {
-            //if (TerrariaSoundSuite.Instance == null)
-            //{
-            //    ErrorLogger.Log("########");
-            //    ErrorLogger.Log($"from path: {type}, {Style}, {volumeScale}, {pitchOffset}");
-            //    ErrorLogger.Log("TESTTEST aaaaaaa");
-            //    ErrorLogger.Log("########");
-            //}
-            //if (Config.Instance == null)
-            //{
-            //    TerrariaSoundSuite.Instance.Logger.Warn("########### Config Instance is null");
-            //    return;
-            //}
-            //if (Config.Instance.Debug == null)
-            //{
-            //    TerrariaSoundSuite.Instance.Logger.Warn("########### Debug is null");
-            //}
-            //if (Config.Instance.Debug.Blacklist == null)
-            //{
-            //    TerrariaSoundSuite.Instance.Logger.Warn("########### list is null ");
-            //}
-            //else
-            //{
-            //    //TerrariaSoundSuite.Instance.Logger.Warn("########### sound: " + new CustomSound((SoundTypeEnum)type, Style));
-            //}
             if (Config.Instance.Debug.Verbose && !Config.Instance.Debug.Contains(type, Style))
             {
                 //Get path to sound
@@ -157,7 +133,6 @@ namespace TerrariaSoundSuite
                 if (!replaced /*&& type != (int)SoundTypeEnum.Waterfall && type != (int)SoundTypeEnum.Lavafall*/)
                 {
                     //Get place where it was called from
-                    //Credit to jopojelly
                     var frames = new StackTrace(true).GetFrames();
                     Logging.PrettifyStackTraceSources(frames);
                     int index = 2;
@@ -173,10 +148,137 @@ namespace TerrariaSoundSuite
             if (string.IsNullOrEmpty(stacktrace)) stacktrace = string.Empty;
         }
 
+        private void HandlePlayer(SoundTypeEnum soundTypeEnum, int style)
+        {
+            Player player;
+            if (soundTypeEnum != SoundTypeEnum.Item && Main.netMode == NetmodeID.SinglePlayer)
+            {
+                origin.Name = "me";
+                return;
+            }
+            for (int i = 0; i < Main.maxPlayers; i++)
+            {
+                player = Main.player[i];
+                if (player.active && player.Hitbox.Contains(worldPos.ToPoint()))
+                {
+                    if (soundTypeEnum == SoundTypeEnum.Item)
+                    {
+                        bool flying = player.wings > 0 && player.controlJump;
+                        if (player.HeldItem.type > 0 && player.HeldItem.UseSound != null &&
+                            player.HeldItem.UseSound.Style == Style && player.itemAnimation == player.itemAnimationMax)
+                        {
+                            origin.ThingID = player.HeldItem.type;
+                            origin.Name = player.HeldItem.Name;
+                            worldPos += new Vector2(-4); //This is to offset other sounds that might occur at the same time (maxMana e.g.)
+                        }
+                        else if (style == 32) //Wings
+                        {
+                            if (flying)
+                            {
+                                Item wingItem = null;
+                                try
+                                {
+                                    if (ModLoader.GetMod("WingSlot") is Mod wingSlot && wingSlot != null)
+                                    {
+                                        wingItem = (Item)wingSlot.Call("getvisible", player.whoAmI);
+                                    }
+                                }
+                                catch
+                                {
+
+                                }
+                                for (int j = 3; j < 8 + player.extraAccessorySlots; j++)
+                                {
+                                    Item item = player.armor[j];
+                                    if (!item.IsAir && item.wingSlot > 0)
+                                    {
+                                        wingItem = item;
+                                    }
+                                }
+                                if (wingItem != null)
+                                {
+                                    origin.ThingID = wingItem.type;
+                                    origin.Name = wingItem.Name;
+                                    origin.Ignore = true;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (i == Main.myPlayer) origin.Name = "me";
+                        else origin.Name = player.name;
+                    }
+                    break;
+                }
+            }
+        }
+
+        private void HandleNPC(SoundTypeEnum soundTypeEnum, int style)
+        {
+            NPC npc;
+            for (int i = 0; i < Main.maxNPCs; i++)
+            {
+                npc = Main.npc[i];
+                if (npc.active)
+                {
+                    if (soundTypeEnum == SoundTypeEnum.Chat)
+                    {
+                        if (npc.townNPC && Main.LocalPlayer.talkNPC == i)
+                        {
+                            origin.ThingID = npc.type;
+                            origin.Name = npc.FullName;
+                            break;
+                        }
+                    }
+                    else if (npc.Hitbox.Contains(worldPos.ToPoint()))
+                    {
+                        if (soundTypeEnum == SoundTypeEnum.NPCHit && npc.HitSound != null && npc.HitSound.Style == Style)
+                        {
+                            origin.ThingID = npc.type;
+                            origin.Name = npc.GivenOrTypeName;
+                        }
+                        else if (soundTypeEnum == SoundTypeEnum.NPCKilled && npc.DeathSound != null && npc.DeathSound.Style == Style)
+                        {
+                            origin.ThingID = npc.type;
+                            origin.Name = npc.GivenOrTypeName;
+                            worldPos += new Vector2(4); //This is to offset the hitsound and deathsound position
+                        }
+                        else
+                        {
+                            origin.Name = npc.GivenOrTypeName;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void HandleTile(SoundTypeEnum soundTypeEnum, int style)
+        {
+            Point point = worldPos.ToTileCoordinates();
+            Tile tile = Framing.GetTileSafely(point);
+            if (tile.active())
+            {
+                //Credit to jopojelly (WorldgenPreviewer)
+                string text = "";
+                if (tile.type < TileID.Count) text = Lang._mapLegendCache.FromTile(Main.Map[point.X, point.Y], point.X, point.Y);
+                if (text == string.Empty)
+                {
+                    if (tile.type < TileID.Count)
+                        text = TileID.Search.GetName(tile.type);
+                    else
+                        text = TileLoader.GetTile(tile.type).Name;
+                }
+                if (text != string.Empty)
+                {
+                    origin.Name = text;
+                }
+            }
+        }
+
         internal void GetOrigin(SoundTypeEnum soundTypeEnum, int style = -1)
         {
-            //TODO origin name not being displayed when sound is replaced
-            Entity ent;
             switch (soundTypeEnum)
             {
                 case SoundTypeEnum.Item:
@@ -185,51 +287,7 @@ namespace TerrariaSoundSuite
                 case SoundTypeEnum.PlayerKilled:
                 case SoundTypeEnum.MaxMana:
                 case SoundTypeEnum.DoubleJump:
-                    if (soundTypeEnum != SoundTypeEnum.Item && Main.netMode == NetmodeID.SinglePlayer)
-                    {
-                        origin.Name = "me";
-                        break;
-                    }
-                    for (int i = 0; i < Main.maxPlayers; i++)
-                    {
-                        ent = Main.player[i];
-                        if (ent.active && ent.Hitbox.Contains(worldPos.ToPoint()) && ent is Player player)
-                        {
-                            if (soundTypeEnum == SoundTypeEnum.Item)
-                            {
-                                bool flying = player.wings > 0 && player.controlJump;
-                                if (player.HeldItem.type > 0 && player.HeldItem.UseSound != null &&
-                                    player.HeldItem.UseSound.Style == Style && player.itemAnimation == player.itemAnimationMax)
-                                {
-                                    origin.ThingID = player.HeldItem.type;
-                                    origin.Name = player.HeldItem.Name;
-                                    worldPos += new Vector2(-4); //This is to offset other sounds that might occur at the same time (maxMana e.g.)
-                                }
-                                else if (style == 32) //Wings
-                                {
-                                    if (flying)
-                                    {
-                                        for (int j = 3; j < 8 + player.extraAccessorySlots; j++)
-                                        {
-                                            Item item = player.armor[j];
-                                            if (!item.IsAir && item.wingSlot > 0)
-                                            {
-                                                origin.ThingID = item.type;
-                                                origin.Name = item.Name;
-                                                origin.Ignore = true;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                if (i == Main.myPlayer) origin.Name = "me";
-                                else origin.Name = player.name;
-                            }
-                            break;
-                        }
-                    }
+                    HandlePlayer(soundTypeEnum, style);
                     break;
                 case SoundTypeEnum.NPCHit:
                 case SoundTypeEnum.NPCKilled:
@@ -245,66 +303,14 @@ namespace TerrariaSoundSuite
                 case SoundTypeEnum.Critter:
                 case SoundTypeEnum.Chat:
                 case SoundTypeEnum.Splash:
-                    for (int i = 0; i < Main.maxNPCs; i++)
-                    {
-                        ent = Main.npc[i];
-                        if (ent.active && ent is NPC npc)
-                        {
-                            if (soundTypeEnum == SoundTypeEnum.Chat)
-                            {
-                                if (npc.townNPC && Main.LocalPlayer.talkNPC == i)
-                                {
-                                    origin.ThingID = npc.type;
-                                    origin.Name = npc.FullName;
-                                    break;
-                                }
-                            }
-                            else if (ent.Hitbox.Contains(worldPos.ToPoint()))
-                            {
-                                if (soundTypeEnum == SoundTypeEnum.NPCHit && npc.HitSound != null && npc.HitSound.Style == Style)
-                                {
-                                    origin.ThingID = npc.type;
-                                    origin.Name = npc.GivenOrTypeName;
-                                }
-                                else if (soundTypeEnum == SoundTypeEnum.NPCKilled && npc.DeathSound != null && npc.DeathSound.Style == Style)
-                                {
-                                    origin.ThingID = npc.type;
-                                    origin.Name = npc.GivenOrTypeName;
-                                    worldPos += new Vector2(4); //This is to offset the hitsound and deathsound position
-                                }
-                                else
-                                {
-                                    origin.Name = npc.GivenOrTypeName;
-                                }
-                                break;
-                            }
-                        }
-                    }
+                    HandleNPC(soundTypeEnum, style);
                     break;
                 case SoundTypeEnum.Grass:
                 case SoundTypeEnum.Mech:
                 case SoundTypeEnum.DoorClosed:
                 case SoundTypeEnum.DoorOpen:
                 case SoundTypeEnum.Tile:
-                    Point point = worldPos.ToTileCoordinates();
-                    Tile tile = Framing.GetTileSafely(point);
-                    if (tile.active())
-                    {
-                        //Credit to jopojelly (WorldgenPreviewer)
-                        string text = "";
-                        if (tile.type < TileID.Count) text = Lang._mapLegendCache.FromTile(Main.Map[point.X, point.Y], point.X, point.Y);
-                        if (text == string.Empty)
-                        {
-                            if (tile.type < TileID.Count)
-                                text = TileID.Search.GetName(tile.type);
-                            else
-                                text = TileLoader.GetTile(tile.type).Name;
-                        }
-                        if (text != string.Empty)
-                        {
-                            origin.Name = text;
-                        }
-                    }
+                    HandleTile(soundTypeEnum, style);
                     break;
                 //case SoundTypeEnum.Grab: doesn't work cause sound originates from player
                 default:
