@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using Terraria;
+using Terraria.ID;
 using Terraria.ModLoader.Config;
 
 namespace TerrariaSoundSuite
@@ -63,6 +64,10 @@ namespace TerrariaSoundSuite
                 _Pitch = Utils.Clamp(value, MIN_PITCH, MAX_PITCH);
             }
         }
+
+        [Label("Held Item Constraint")]
+        [Tooltip("Only apply this sound if player holds this specified item (if no constraint, applies it)")]
+        public ItemDefinition HeldItemConstraint = new ItemDefinition(ItemID.None);
 
         public override string ToString()
         {

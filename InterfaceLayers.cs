@@ -181,9 +181,12 @@ namespace TerrariaSoundSuite
 
             int addedSoundIndex = -1;
 
-            for (int i = 0; i < Data.playedSounds.Count; i++)
+
+            List<DebugSound> playedSounds = Data.playedSounds;
+
+            for (int i = 0; i < playedSounds.Count; i++)
             {
-                DebugSound sound = Data.playedSounds[i];
+                DebugSound sound = playedSounds[i];
                 float distance = player.DistanceSQ(sound.worldPos);
                 distance = distance > Data.MaxRangeSQ ? Data.MaxRangeSQ : distance;
                 float ratio = 1 - distance / Data.MaxRangeSQ;
@@ -220,7 +223,7 @@ namespace TerrariaSoundSuite
                             if (!sound.Tracked)
                             {
                                 //always space for one
-                                if (Data.playedSounds.Count(s => s.Tracked) < Config.Instance.Debug.TrackedSoundsCount - 1)
+                                if (playedSounds.Count(s => s.Tracked) < Config.Instance.Debug.TrackedSoundsCount - 1)
                                 {
                                     sound.color = Main.DiscoColor;
                                     sound.Tracked = true;
@@ -242,14 +245,14 @@ namespace TerrariaSoundSuite
             if (addedSoundIndex != -1)
             {
                 //Reorder tracked sounds to the beginning
-                DebugSound temp = Data.playedSounds.ElementAt(addedSoundIndex);
-                Data.playedSounds.RemoveAt(addedSoundIndex);
-                Data.playedSounds.Insert(0, temp);
+                DebugSound temp = playedSounds.ElementAt(addedSoundIndex);
+                playedSounds.RemoveAt(addedSoundIndex);
+                playedSounds.Insert(0, temp);
             }
 
             if (Data.hoverIndex != -1 && !player.mouseInterface)
             {
-                DebugSound hover = Data.playedSounds[Data.hoverIndex];
+                DebugSound hover = playedSounds[Data.hoverIndex];
                 Vector2 vector = Main.ThickMouse ? new Vector2(16) : new Vector2(10);
                 vector += Main.MouseScreen;
                 ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontMouseText, "Left click to " + (hover.Tracked ? "un" : "") + "track sound", vector, Color.White, 0f, Vector2.Zero, Vector2.One);

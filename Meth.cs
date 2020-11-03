@@ -3,6 +3,7 @@ using System;
 using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
+using Terraria.ModLoader.Config;
 
 namespace TerrariaSoundSuite
 {
@@ -130,6 +131,37 @@ namespace TerrariaSoundSuite
             {
                 return false;
             }
+        }
+
+        internal static void AssignSoundFromPageIfMatch<T>(DictPage<T> page, DebugSound debug, ref CustomSoundValue custom) where T : EntityDefinition
+        {
+            if (custom != null) return;
+
+            if (page.Active && debug.origin.Valid(page.AssociatedSoundType))
+            {
+                T nothing = Activator.CreateInstance<T>();
+                T item = (T)Activator.CreateInstance(typeof(T), new object[] { debug.origin.ThingID });
+                //A set rule takes priority over the nothing rule
+                if (page.Rule.ContainsKey(item))
+                {
+                    custom = page.Rule[item];
+                }
+                else if (page.Rule.ContainsKey(nothing))
+                {
+                    custom = page.Rule[nothing];
+                }
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the constraint is satisfied, or none is specified (or the game is in the menu)
+        /// </summary>
+        internal static bool SatisfiesConstraint(CustomSoundValue custom)
+        {
+            if (Main.gameMenu) return true;
+            int type = custom.HeldItemConstraint.Type;
+            if (type == 0 || type == ItemID.Count) return true;
+            return Main.LocalPlayer.HeldItem.type == type;
         }
 
         #region Red is an ass and we won't be working with him again
