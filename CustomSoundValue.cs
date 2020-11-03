@@ -66,7 +66,7 @@ namespace TerrariaSoundSuite
 		}
 
 		[Label("Held Item Constraint")]
-		[Tooltip("Only apply this sound if player holds this specified item (if no constraint, applies it)")]
+		[Tooltip("Only apply this sound if player holds this specified item (leave blank to always apply)")]
 		public ItemDefinition HeldItemConstraint = new ItemDefinition(ItemID.None);
 
 		public override string ToString()
