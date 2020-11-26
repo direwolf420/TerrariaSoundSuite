@@ -180,7 +180,7 @@ namespace TerrariaSoundSuite
 								{
 									if (ModLoader.GetMod("WingSlot") is Mod wingSlot && wingSlot != null)
 									{
-										wingItem = (Item)wingSlot.Call("getvisible", player.whoAmI);
+										wingItem = (Item)wingSlot.Call("getVisible", player.whoAmI);
 									}
 								}
 								catch
